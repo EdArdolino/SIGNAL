@@ -1177,7 +1177,7 @@ async function initKeyBadges() {
     const sb = document.getElementById('shodan-key-badge');
     if (ks.shodan?.loaded) {
       sb.className = 'shodan-key-badge key-ok';
-      sb.textContent = `⬤ KEY LOADED (${ks.shodan.hint})`;
+      sb.textContent = `⬤ KEY LOADED`;
     } else {
       sb.className = 'shodan-key-badge key-miss';
       sb.textContent = '⬤ KEY NOT LOADED — add to Shodan_API.txt';
@@ -1185,7 +1185,7 @@ async function initKeyBadges() {
     // FR24
     const fb = document.getElementById('fr24-key-badge');
     if (ks.flightradar?.loaded) {
-      fb.textContent = `⬤ KEY LOADED (${ks.flightradar.hint})`;
+      fb.textContent = `⬤ KEY LOADED`;
       fb.style.color = '#22c55e'; fb.style.borderColor = 'rgba(34,197,94,.3)'; fb.style.background = 'rgba(34,197,94,.1)';
     } else {
       fb.textContent = '⬤ KEY NOT LOADED — add to FL24_API.txt';
@@ -1194,7 +1194,7 @@ async function initKeyBadges() {
     const mb = document.getElementById('mt-key-badge');
     if (ks.marinetraffic?.loaded) {
       mb.className = 'mt-key-badge mt-key-ok';
-      mb.textContent = `⬤ KEY LOADED (${ks.marinetraffic.hint})`;
+      mb.textContent = `⬤ KEY LOADED`;
     } else {
       mb.className = 'mt-key-badge mt-key-miss';
       mb.textContent = '⬤ KEY NOT LOADED — add to MT_API.txt';
