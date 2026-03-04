@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>SIGNAL — Multi-Stream Intelligence Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:      #07090d;
+  --surface: #0d1117;
+  --border:  #1e2530;
+  --text:    #c9d1e0;
+  --muted:   #4a5568;
+  --live:    #22c55e;
+  --up:      #22c55e;
+  --down:    #ef4444;
+  --fhead:   'Syne', sans-serif;
+  --fmono:   'Space Mono', monospace;
+  --fbody:   'DM Mono', monospace;
+}
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--fbody); font-size: 13px; line-height: 1.6; min-height: 100vh; overflow-x: hidden; }
+body::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px); pointer-events: none; z-index: 9999; }
+
+/* TOP BAR */
+.topbar { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 20px; padding: 0 24px; height: 52px; background: rgba(7,9,13,.96); border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); }
+.logo { font-family: var(--fhead); font-weight: 800; font-size: 18px; letter-spacing: .12em; color: #fff; text-transform: uppercase; }
+.logo span { color: #00ffe0; }
+.live-badge { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; letter-spacing: .15em; color: var(--live); }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 8px var(--live); animation: pulse 1.4s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.5; transform:scale(.8); } }
+.topbar-time { margin-left: auto; font-family: var(--fmono); font-size: 11px; color: var(--muted); }
+.refresh-btn { background: none; border: 1px solid var(--border); color: var(--muted); font-family: var(--fmono); font-size: 10px; padding: 4px 12px; cursor: pointer; letter-spacing: .1em; transition: all .2s; }
+.refresh-btn:hover { border-color: #00ffe0; color: #00ffe0; }
+
+/* TICKER */
+.ticker-wrap { background: var(--surface); border-bottom: 1px solid var(--border); overflow: hidden; height: 32px; }
+.ticker-track { display: flex; animation: ticker-scroll 50s linear infinite; white-space: nowrap; height: 100%; align-items: center; }
+.ticker-track:hover { animation-play-state: paused; }
+@keyframes ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ticker-item { display: inline-flex; align-items: center; gap: 8px; padding: 0 28px; font-family: var(--fmono); font-size: 11px; color: var(--muted); border-right: 1px solid var(--border); }
+.tag { font-size: 9px; font-weight: 700; letter-spacing: .15em; padding: 1px 6px; border-radius: 2px; text-transform: uppercase; }
+
+/* GRID */
+.dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); min-height: calc(100vh - 116px); }
+
+/* PANEL */
+.panel { background: var(--surface); display: flex; flex-direction: column; min-height: 560px; }
+
+/* PANEL HEADER */
+.panel-header { display: flex; align-items: stretch; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.panel-accent { width: 3px; flex-shrink: 0; transition: background .4s, box-shadow .4s; }
+.panel-header-inner { flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px 14px; min-width: 0; }
+.panel-title { font-family: var(--fhead); font-weight: 700; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel-source { font-size: 9px; letter-spacing: .08em; color: var(--muted); white-space: nowrap; }
+
+/* FEED SELECTOR DROPDOWN */
+.feed-select-wrap { margin-left: auto; position: relative; flex-shrink: 0; }
+.feed-select {
+  appearance: none;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--fmono);
+  font-size: 9px;
+  padding: 4px 22px 4px 8px;
+  cursor: pointer;
+  letter-spacing: .08em;
+  outline: none;
+  transition: all .2s;
+  border-radius: 2px;
+  max-width: 130px;
+}
+.feed-select:hover, .feed-select:focus { border-color: #00ffe0; color: #00ffe0; }
+.feed-select-wrap::after { content: '▾'; position: absolute; right: 7px; top: 50%; transform: translateY(-50%); font-size: 9px; color: var(--muted); pointer-events: none; }
+
+/* STATUS BADGE */
+.panel-status { display: flex; align-items: center; gap: 4px; font-size: 9px; color: var(--muted); letter-spacing: .1em; white-space: nowrap; padding-left: 4px; }
+.sdot { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); }
+.status-live .sdot { background: var(--live); box-shadow: 0 0 5px var(--live); animation: pulse 1.4s infinite; }
+.status-demo .sdot { background: #f5c842; }
+.status-demo { color: #f5c842 !important; }
+.status-error .sdot { background: var(--down); }
+
+/* PANEL BODY */
+.panel-body { flex: 1; overflow-y: auto; }
+.panel-body::-webkit-scrollbar { width: 3px; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* PANEL FOOTER */
+.panel-footer { padding: 7px 14px; border-top: 1px solid var(--border); font-size: 9px; color: var(--muted); letter-spacing: .07em; display: flex; justify-content: space-between; flex-shrink: 0; }
+
+/* LOADING */
+.state-msg { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px 24px; min-height: 160px; color: var(--muted); font-size: 11px; letter-spacing: .1em; text-align: center; }
+.spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: #00ffe0; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ══ FEED STYLES ══ */
+
+/* HACKER NEWS */
+.hn-item { display: flex; gap: 12px; align-items: flex-start; padding: 11px 14px; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit; transition: background .15s; }
+.hn-item:hover { background: rgba(245,200,66,.04); }
+.hn-rank { font-family: var(--fmono); font-size: 10px; color: var(--muted); width: 18px; flex-shrink: 0; padding-top: 2px; }
+.hn-title { font-family: var(--fhead); font-size: 12px; font-weight: 600; color: #e8eaf2; line-height: 1.4; margin-bottom: 4px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.hn-meta { display: flex; gap: 10px; font-size: 10px; color: var(--muted); font-family: var(--fmono); }
+.hn-score { color: #f5c842; }
+
+/* EARTHQUAKES */
+.eq-item { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border); transition: background .15s; }
+.eq-item:hover { background: rgba(255,62,108,.04); }
+.eq-mag { font-family: var(--fmono); font-weight: 700; font-size: 17px; width: 40px; flex-shrink: 0; text-align: center; line-height: 1; }
+.mag-lo { color: #f5c842; } .mag-mi { color: #f97316; } .mag-hi { color: #ff3e6c; text-shadow: 0 0 8px #ff3e6c; }
+.eq-place { font-size: 11px; color: #e8eaf2; font-family: var(--fhead); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; }
+.eq-meta { display: flex; gap: 10px; font-size: 10px; color: var(--muted); font-family: var(--fmono); }
+.eq-bar { width: 3px; align-self: stretch; border-radius: 2px; flex-shrink: 0; }
+
+/* CRYPTO */
+.tbl-head { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; padding: 6px 14px; font-size: 9px; letter-spacing: .1em; color: var(--muted); border-bottom: 1px solid var(--border); text-transform: uppercase; }
+.crypto-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; padding: 9px 14px; border-bottom: 1px solid var(--border); align-items: center; transition: background .15s; }
+.crypto-row:hover { background: rgba(0,255,224,.04); }
+.cr-name { display: flex; align-items: center; gap: 6px; }
+.cr-sym { font-family: var(--fmono); font-weight: 700; font-size: 11px; color: #fff; width: 38px; }
+.cr-full { font-size: 9px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-price { font-family: var(--fmono); font-size: 11px; color: #e8eaf2; text-align: right; }
+.cr-pct { font-family: var(--fmono); font-size: 10px; text-align: right; }
+.up { color: var(--up); } .dn { color: var(--down); } .fl { color: var(--muted); }
+
+/* WEATHER */
+.wx-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--border); transition: background .15s; }
+.wx-item:hover { background: rgba(56,189,248,.04); }
+.wx-icon { font-size: 26px; width: 34px; text-align: center; flex-shrink: 0; }
+.wx-city { font-family: var(--fhead); font-weight: 700; font-size: 12px; color: #e8eaf2; margin-bottom: 2px; }
+.wx-cond { font-size: 10px; color: var(--muted); }
+.wx-stats { display: flex; gap: 10px; font-size: 10px; color: var(--muted); font-family: var(--fmono); margin-top: 3px; }
+.wx-temp { margin-left: auto; text-align: right; }
+.wx-main { font-family: var(--fmono); font-size: 20px; font-weight: 700; color: #fff; line-height: 1; }
+.wx-feels { font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+/* GITHUB */
+.gh-item { padding: 11px 14px; border-bottom: 1px solid var(--border); transition: background .15s; cursor: pointer; }
+.gh-item:hover { background: rgba(167,139,250,.04); }
+.gh-name { font-family: var(--fmono); font-size: 11px; color: #a78bfa; margin-bottom: 3px; }
+.gh-desc { font-size: 10px; color: var(--muted); margin-bottom: 5px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+.gh-meta { display: flex; gap: 12px; font-size: 10px; font-family: var(--fmono); color: var(--muted); }
+.gh-stars { color: #f5c842; } .gh-lang { color: #a78bfa; } .gh-delta { color: var(--up); margin-left: auto; }
+
+/* SPACEX */
+.sx-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--border); transition: background .15s; }
+.sx-item:hover { background: rgba(251,146,60,.04); }
+.sx-status { font-size: 9px; font-weight: 700; letter-spacing: .1em; padding: 2px 6px; border-radius: 2px; flex-shrink: 0; text-transform: uppercase; }
+.st-success { background: rgba(34,197,94,.15); color: #22c55e; }
+.st-failure { background: rgba(239,68,68,.15); color: #ef4444; }
+.st-partial  { background: rgba(245,200,66,.15); color: #f5c842; }
+.st-tbd      { background: rgba(74,85,104,.3);   color: var(--muted); }
+.sx-mission { font-family: var(--fhead); font-weight: 700; font-size: 12px; color: #e8eaf2; margin-bottom: 3px; }
+.sx-meta { font-size: 10px; color: var(--muted); font-family: var(--fmono); }
+.sx-rocket { margin-left: auto; font-size: 10px; color: #fb923c; font-family: var(--fmono); white-space: nowrap; }
+
+/* REDDIT */
+.rd-item { display: flex; gap: 10px; align-items: flex-start; padding: 11px 14px; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit; transition: background .15s; cursor: pointer; }
+.rd-item:hover { background: rgba(248,113,113,.04); }
+.rd-votes { font-family: var(--fmono); font-size: 12px; font-weight: 700; color: #f87171; width: 42px; text-align: center; flex-shrink: 0; padding-top: 2px; }
+.rd-sub { font-size: 9px; color: #f87171; letter-spacing: .08em; margin-bottom: 3px; }
+.rd-title { font-size: 11px; color: #e8eaf2; font-family: var(--fhead); font-weight: 600; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.rd-comments { font-size: 10px; color: var(--muted); font-family: var(--fmono); margin-top: 3px; }
+
+/* NASA */
+.na-item { padding: 12px 14px; border-bottom: 1px solid var(--border); transition: background .15s; cursor: pointer; }
+.na-item:hover { background: rgba(96,165,250,.04); }
+.na-cat { font-size: 9px; font-weight: 700; letter-spacing: .15em; color: #60a5fa; margin-bottom: 4px; text-transform: uppercase; }
+.na-title { font-family: var(--fhead); font-weight: 600; font-size: 12px; color: #e8eaf2; line-height: 1.4; margin-bottom: 4px; }
+.na-date { font-size: 10px; color: var(--muted); font-family: var(--fmono); }
+
+/* STOCKS */
+.sk-head { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; padding: 6px 14px; font-size: 9px; letter-spacing: .1em; color: var(--muted); border-bottom: 1px solid var(--border); text-transform: uppercase; }
+.sk-row { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; padding: 9px 14px; border-bottom: 1px solid var(--border); align-items: center; transition: background .15s; }
+.sk-row:hover { background: rgba(52,211,153,.04); }
+.sk-sym { font-family: var(--fmono); font-weight: 700; font-size: 12px; color: #fff; }
+.sk-name { font-size: 9px; color: var(--muted); }
+.sk-price { font-family: var(--fmono); font-size: 11px; color: #e8eaf2; text-align: right; }
+.sk-chg { font-family: var(--fmono); font-size: 10px; text-align: right; }
+
+/* ══ SHODAN SECTION ══ */
+.shodan-section { border-top: 2px solid #ff6b35; background: #09090e; }
+.shodan-header { display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-bottom: 1px solid #1e2530; flex-wrap: wrap; gap: 10px; }
+.shodan-logo { font-family: var(--fhead); font-weight: 800; font-size: 16px; letter-spacing: .15em; color: #ff6b35; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+.shodan-logo .s-eye { font-size: 20px; }
+.shodan-key-badge { display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 3px 10px; border-radius: 2px; font-family: var(--fmono); letter-spacing: .1em; }
+.key-ok   { background: rgba(34,197,94,.12); color: #22c55e; border: 1px solid rgba(34,197,94,.3); }
+.key-miss { background: rgba(255,107,53,.12); color: #ff6b35; border: 1px solid rgba(255,107,53,.3); }
+.shodan-tabs { display: flex; gap: 2px; padding: 0 24px; border-bottom: 1px solid #1e2530; overflow-x: auto; flex-wrap: nowrap; }
+.s-tab { font-family: var(--fmono); font-size: 10px; letter-spacing: .1em; padding: 10px 18px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .2s; text-transform: uppercase; }
+.s-tab:hover { color: #ff6b35; }
+.s-tab.active { color: #ff6b35; border-bottom-color: #ff6b35; }
+.s-pane { display: none; padding: 20px 24px; }
+.s-pane.active { display: block; }
+.s-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px; }
+.s-input-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
+.s-label { font-size: 9px; letter-spacing: .14em; color: var(--muted); text-transform: uppercase; font-family: var(--fmono); }
+.s-input { background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--fmono); font-size: 12px; padding: 8px 12px; outline: none; transition: border .2s; width: 100%; }
+.s-input:focus { border-color: #ff6b35; }
+.s-btn { background: #ff6b35; border: none; color: #000; font-family: var(--fmono); font-size: 10px; font-weight: 700; letter-spacing: .1em; padding: 9px 20px; cursor: pointer; text-transform: uppercase; transition: background .2s; white-space: nowrap; }
+.s-btn:hover { background: #ff8c42; }
+.s-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+.s-btn-sm { padding: 6px 14px; font-size: 9px; }
+.s-btn-danger { background: #ef4444; }
+.s-btn-danger:hover { background: #f87171; }
+.s-results { margin-top: 4px; }
+.s-card { background: var(--bg); border: 1px solid var(--border); margin-bottom: 10px; }
+.s-card-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.s-card-title { font-family: var(--fhead); font-weight: 700; font-size: 13px; color: #ff8c42; }
+.s-card-body { padding: 12px 14px; }
+.s-kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.s-kv-item { display: flex; flex-direction: column; gap: 2px; }
+.s-kv-key { font-size: 9px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; font-family: var(--fmono); }
+.s-kv-val { font-family: var(--fmono); font-size: 12px; color: #e8eaf2; word-break: break-all; }
+.s-port-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.s-port-row:last-child { border-bottom: none; }
+.s-port-num { font-family: var(--fmono); font-weight: 700; font-size: 12px; color: #ff8c42; width: 56px; }
+.s-port-proto { font-size: 9px; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; width: 36px; }
+.s-port-product { font-size: 11px; color: #c9d1e0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s-port-vulns { font-size: 9px; font-weight: 700; background: rgba(239,68,68,.15); color: #ef4444; padding: 1px 6px; border-radius: 2px; }
+.s-banner { font-family: var(--fmono); font-size: 10px; color: #64748b; background: #020408; border: 1px solid var(--border); padding: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; margin-top: 6px; max-height: 100px; }
+.s-tag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: .1em; padding: 2px 7px; border-radius: 2px; margin: 2px; background: rgba(255,107,53,.15); color: #ff6b35; text-transform: uppercase; }
+.s-vuln { display: flex; align-items: flex-start; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.s-vuln:last-child { border-bottom: none; }
+.s-vuln-id { font-family: var(--fmono); font-size: 11px; color: #ef4444; font-weight: 700; white-space: nowrap; }
+.s-vuln-cvss { font-family: var(--fmono); font-size: 11px; font-weight: 700; width: 32px; }
+.cvss-hi { color: #ef4444; } .cvss-mi { color: #f97316; } .cvss-lo { color: #f5c842; }
+.s-vuln-summary { font-size: 10px; color: #c9d1e0; line-height: 1.5; }
+.s-match-row { display: grid; grid-template-columns: 140px 60px 1fr 100px; gap: 8px; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--border); transition: background .15s; }
+.s-match-row:hover { background: rgba(255,107,53,.04); }
+.s-match-ip { font-family: var(--fmono); font-size: 11px; color: #ff8c42; cursor: pointer; }
+.s-match-ip:hover { text-decoration: underline; }
+.s-match-port { font-family: var(--fmono); font-size: 11px; color: #f5c842; }
+.s-match-info { font-size: 10px; color: #c9d1e0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s-match-org { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.s-dns-result { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--border); font-family: var(--fmono); font-size: 12px; }
+.s-dns-host { color: #a78bfa; } .s-dns-arrow { color: var(--muted); padding: 0 12px; } .s-dns-ip { color: #ff8c42; }
+.s-exploit-row { padding: 10px 14px; border-bottom: 1px solid var(--border); transition: background .15s; }
+.s-exploit-row:hover { background: rgba(239,68,68,.04); }
+.s-exploit-title { font-size: 11px; color: #e8eaf2; font-family: var(--fhead); font-weight: 600; margin-bottom: 4px; }
+.s-exploit-meta { display: flex; gap: 12px; font-size: 10px; color: var(--muted); font-family: var(--fmono); flex-wrap: wrap; }
+.s-exploit-cve { color: #ef4444; } .s-exploit-type { color: #f5c842; } .s-exploit-src { color: #60a5fa; }
+.s-alert-row { display: flex; align-items: center; gap: 12px; padding: 9px 14px; border-bottom: 1px solid var(--border); }
+.s-alert-name { font-family: var(--fhead); font-weight: 600; font-size: 12px; color: #e8eaf2; flex: 1; }
+.s-alert-meta { font-size: 10px; color: var(--muted); font-family: var(--fmono); }
+.s-alert-id { font-family: var(--fmono); font-size: 9px; color: var(--muted); }
+.s-stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.s-stat-card { background: var(--bg); border: 1px solid var(--border); padding: 14px; display: flex; flex-direction: column; gap: 4px; }
+.s-stat-label { font-size: 9px; letter-spacing: .14em; color: var(--muted); text-transform: uppercase; font-family: var(--fmono); }
+.s-stat-val { font-family: var(--fmono); font-size: 22px; font-weight: 700; color: #ff8c42; line-height: 1; }
+.s-stat-sub { font-size: 9px; color: var(--muted); }
+.s-no-key { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 40px 24px; text-align: center; color: var(--muted); }
+.s-no-key-icon { font-size: 36px; }
+.s-no-key-title { font-family: var(--fhead); font-weight: 700; font-size: 16px; color: #ff6b35; letter-spacing: .1em; }
+.s-no-key-sub { font-size: 12px; line-height: 1.7; max-width: 420px; }
+.s-no-key-code { font-family: var(--fmono); font-size: 11px; background: var(--bg); border: 1px solid var(--border); padding: 8px 16px; color: #ff8c42; }
+.s-loading { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 11px; padding: 20px 0; }
+.s-error { color: #ef4444; font-family: var(--fmono); font-size: 11px; padding: 12px 0; }
+.s-pagination { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.s-page-btn { background: var(--bg); border: 1px solid var(--border); color: var(--muted); font-family: var(--fmono); font-size: 10px; padding: 5px 12px; cursor: pointer; }
+.s-page-btn:hover { border-color: #ff6b35; color: #ff6b35; }
+.s-page-info { font-family: var(--fmono); font-size: 10px; color: var(--muted); }
+.s-facets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.s-facet-block { background: var(--bg); border: 1px solid var(--border); padding: 8px 12px; min-width: 140px; }
+.s-facet-label { font-size: 9px; letter-spacing: .1em; color: var(--muted); text-transform: uppercase; margin-bottom: 6px; }
+.s-facet-item { display: flex; justify-content: space-between; font-family: var(--fmono); font-size: 10px; color: #c9d1e0; padding: 2px 0; }
+.s-facet-count { color: #ff8c42; }
+.s-subdomain-list { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 0; }
+.s-subdomain { font-family: var(--fmono); font-size: 10px; background: rgba(167,139,250,.1); color: #a78bfa; padding: 3px 8px; border-radius: 2px; }
+.s-scan-progress { display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--bg); border: 1px solid var(--border); font-family: var(--fmono); font-size: 11px; }
+.s-scan-id { color: #ff8c42; } .s-scan-status { color: var(--live); }
+.s-protocol-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; padding: 10px 0; }
+.s-protocol-item { display: flex; justify-content: space-between; background: var(--bg); border: 1px solid var(--border); padding: 6px 10px; font-family: var(--fmono); font-size: 10px; }
+.s-protocol-name { color: #ff8c42; } .s-protocol-desc { color: var(--muted); font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ══ FLIGHTRADAR24 SECTION ══ */
+.fr-section { border-top: 2px solid #38d4f5; background: #07090f; }
+.fr-header { display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.fr-logo { font-family: var(--fhead); font-weight: 800; font-size: 16px; letter-spacing: .15em; color: #38d4f5; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+.fr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1px; background: var(--border); }
+.fr-flight-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); transition: background .15s; }
+.fr-flight-row:hover { background: rgba(56,212,245,.04); }
+.fr-callsign { font-family: var(--fmono); font-weight: 700; font-size: 12px; color: #38d4f5; width: 82px; flex-shrink: 0; }
+.fr-route { font-size: 11px; color: #e8eaf2; font-family: var(--fhead); font-weight: 600; }
+.fr-airline { font-size: 9px; color: var(--muted); margin-top: 1px; }
+.fr-stats { margin-left: auto; text-align: right; font-family: var(--fmono); font-size: 10px; color: var(--muted); }
+.fr-alt { color: #38d4f5; font-size: 11px; }
+.fr-badge { font-size: 8px; font-weight: 700; letter-spacing: .1em; padding: 1px 5px; border-radius: 2px; text-transform: uppercase; }
+.fr-en-route  { background: rgba(34,197,94,.15); color: #22c55e; }
+.fr-descending{ background: rgba(245,200,66,.15); color: #f5c842; }
+.fr-landed    { background: rgba(74,85,104,.3);   color: var(--muted); }
+.fr-tabs { display: flex; gap: 2px; padding: 0 24px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.fr-tab { font-family: var(--fmono); font-size: 10px; letter-spacing: .1em; padding: 10px 18px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .2s; text-transform: uppercase; }
+.fr-tab:hover { color: #38d4f5; }
+.fr-tab.active { color: #38d4f5; border-bottom-color: #38d4f5; }
+.fr-pane { display: none; padding: 20px 24px; }
+.fr-pane.active { display: block; }
+.fr-input { background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--fmono); font-size: 12px; padding: 8px 12px; outline: none; transition: border .2s; width: 100%; }
+.fr-input:focus { border-color: #38d4f5; }
+.fr-btn { background: #38d4f5; border: none; color: #000; font-family: var(--fmono); font-size: 10px; font-weight: 700; letter-spacing: .1em; padding: 9px 20px; cursor: pointer; text-transform: uppercase; transition: background .2s; white-space: nowrap; }
+.fr-btn:hover { background: #7ee8f8; }
+.fr-btn-sm { padding: 6px 14px; font-size: 9px; }
+.fr-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 8px; margin-bottom: 12px; }
+
+/* ══ MARINE TRAFFIC SECTION ══ */
+.mt-section { border-top: 2px solid #0ea5e9; background: #070b0f; }
+.mt-header { display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.mt-logo { font-family: var(--fhead); font-weight: 800; font-size: 16px; letter-spacing: .15em; color: #0ea5e9; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+.mt-vessel-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); transition: background .15s; }
+.mt-vessel-row:hover { background: rgba(14,165,233,.04); }
+.mt-vessel-name { font-family: var(--fmono); font-weight: 700; font-size: 12px; color: #38bdf8; width: 160px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mt-vessel-type { font-size: 9px; color: var(--muted); margin-top: 2px; }
+.mt-flag { font-size: 10px; width: 24px; text-align: center; flex-shrink: 0; }
+.mt-dest { font-size: 11px; color: #e8eaf2; }
+.mt-dest-sub { font-size: 9px; color: var(--muted); font-family: var(--fmono); margin-top: 1px; }
+.mt-speed { margin-left: auto; font-family: var(--fmono); font-size: 12px; color: #0ea5e9; text-align: right; }
+.mt-status-badge { font-size: 8px; font-weight: 700; letter-spacing: .1em; padding: 1px 5px; border-radius: 2px; text-transform: uppercase; white-space: nowrap; }
+.mt-underway { background: rgba(34,197,94,.15); color: #22c55e; }
+.mt-moored   { background: rgba(56,189,248,.15); color: #38bdf8; }
+.mt-anchored { background: rgba(245,200,66,.15); color: #f5c842; }
+.mt-tabs { display: flex; gap: 2px; padding: 0 24px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.mt-tab { font-family: var(--fmono); font-size: 10px; letter-spacing: .1em; padding: 10px 18px; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .2s; text-transform: uppercase; }
+.mt-tab:hover { color: #0ea5e9; }
+.mt-tab.active { color: #0ea5e9; border-bottom-color: #0ea5e9; }
+.mt-pane { display: none; padding: 20px 24px; }
+.mt-pane.active { display: block; }
+.mt-input { background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--fmono); font-size: 12px; padding: 8px 12px; outline: none; transition: border .2s; width: 100%; }
+.mt-input:focus { border-color: #0ea5e9; }
+.mt-btn { background: #0ea5e9; border: none; color: #000; font-family: var(--fmono); font-size: 10px; font-weight: 700; letter-spacing: .1em; padding: 9px 20px; cursor: pointer; text-transform: uppercase; transition: background .2s; white-space: nowrap; }
+.mt-btn:hover { background: #38bdf8; }
+.mt-btn-sm { padding: 6px 14px; font-size: 9px; }
+.mt-key-badge { display: flex; align-items: center; gap: 6px; font-size: 10px; padding: 3px 10px; border-radius: 2px; font-family: var(--fmono); letter-spacing: .1em; }
+.mt-key-ok   { background: rgba(34,197,94,.12); color: #22c55e; border: 1px solid rgba(34,197,94,.3); }
+.mt-key-miss { background: rgba(14,165,233,.12); color: #0ea5e9; border: 1px solid rgba(14,165,233,.3); }
+
+/* SUMMARY BAR */
+.summary-bar { display: grid; grid-template-columns: repeat(3,1fr); border-top: 1px solid var(--border); background: var(--surface); }
+.sum-cell { display: flex; align-items: center; gap: 12px; padding: 10px 18px; border-right: 1px solid var(--border); }
+.sum-cell:last-child { border-right: none; }
+.sum-label { font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.sum-val { font-family: var(--fmono); font-size: 18px; font-weight: 700; color: #fff; line-height: 1; }
+.sum-sub { font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+/* FOOTER */
+.site-footer { text-align: center; padding: 12px; font-size: 10px; color: var(--muted); letter-spacing: .1em; border-top: 1px solid var(--border); }
+.site-footer a { color: #00ffe0; text-decoration: none; }
+
+@media (max-width: 700px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .summary-bar    { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">SIG<span>NAL</span></div>
+  <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+  <span style="color:var(--muted);font-size:10px;letter-spacing:.1em">MULTI-SOURCE INTELLIGENCE</span>
+  <div class="topbar-time" id="clock"></div>
+  <button class="refresh-btn" onclick="refreshAll()">⟳ REFRESH ALL</button>
+</header>
+
+<div class="ticker-wrap">
+  <div class="ticker-track" id="ticker">
+    <div class="ticker-item"><span class="tag" style="background:#002d2a;color:#00ffe0">SIGNAL</span>Loading data feeds…</div>
+  </div>
+</div>
+
+<div class="dashboard-grid">
+
+  <!-- PANEL 0 -->
+  <section class="panel">
+    <div class="panel-header">
+      <div class="panel-accent" id="accent-0"></div>
+      <div class="panel-header-inner">
+        <div style="min-width:0">
+          <div class="panel-title" id="title-0">Loading…</div>
+          <div class="panel-source" id="source-0"></div>
+        </div>
+        <div class="feed-select-wrap">
+          <select class="feed-select" id="select-0" onchange="switchFeed(0,this.value)"></select>
+        </div>
+        <div class="panel-status" id="status-0"><span class="sdot"></span><span>—</span></div>
+      </div>
+    </div>
+    <div class="panel-body" id="body-0"><div class="state-msg"><div class="spinner"></div><span>LOADING…</span></div></div>
+    <div class="panel-footer"><span id="fsrc-0">—</span><span id="fts-0">—</span></div>
+  </section>
+
+  <!-- PANEL 1 -->
+  <section class="panel">
+    <div class="panel-header">
+      <div class="panel-accent" id="accent-1"></div>
+      <div class="panel-header-inner">
+        <div style="min-width:0">
+          <div class="panel-title" id="title-1">Loading…</div>
+          <div class="panel-source" id="source-1"></div>
+        </div>
+        <div class="feed-select-wrap">
+          <select class="feed-select" id="select-1" onchange="switchFeed(1,this.value)"></select>
+        </div>
+        <div class="panel-status" id="status-1"><span class="sdot"></span><span>—</span></div>
+      </div>
+    </div>
+    <div class="panel-body" id="body-1"><div class="state-msg"><div class="spinner"></div><span>LOADING…</span></div></div>
+    <div class="panel-footer"><span id="fsrc-1">—</span><span id="fts-1">—</span></div>
+  </section>
+
+  <!-- PANEL 2 -->
+  <section class="panel">
+    <div class="panel-header">
+      <div class="panel-accent" id="accent-2"></div>
+      <div class="panel-header-inner">
+        <div style="min-width:0">
+          <div class="panel-title" id="title-2">Loading…</div>
+          <div class="panel-source" id="source-2"></div>
+        </div>
+        <div class="feed-select-wrap">
+          <select class="feed-select" id="select-2" onchange="switchFeed(2,this.value)"></select>
+        </div>
+        <div class="panel-status" id="status-2"><span class="sdot"></span><span>—</span></div>
+      </div>
+    </div>
+    <div class="panel-body" id="body-2"><div class="state-msg"><div class="spinner"></div><span>LOADING…</span></div></div>
+    <div class="panel-footer"><span id="fsrc-2">—</span><span id="fts-2">—</span></div>
+  </section>
+
+</div>
+
+<div class="summary-bar">
+  <div class="sum-cell"><div><div class="sum-label" id="sl-0">Panel 1</div><div class="sum-val" id="sv-0">—</div><div class="sum-sub" id="ss-0">—</div></div></div>
+  <div class="sum-cell"><div><div class="sum-label" id="sl-1">Panel 2</div><div class="sum-val" id="sv-1">—</div><div class="sum-sub" id="ss-1">—</div></div></div>
+  <div class="sum-cell"><div><div class="sum-label" id="sl-2">Panel 3</div><div class="sum-val" id="sv-2">—</div><div class="sum-sub" id="ss-2">—</div></div></div>
+</div>
+
+
+<!-- ═══════════════════════ SHODAN INTELLIGENCE SECTION ═══════════════════════ -->
+<section class="shodan-section">
+
+  <div class="shodan-header">
+    <div class="shodan-logo"><span class="s-eye">👁</span> SHODAN INTELLIGENCE</div>
+    <div class="shodan-key-badge key-miss" id="shodan-key-badge">⬤ KEY NOT LOADED</div>
+    <span style="font-size:10px;color:var(--muted);font-family:var(--fmono)" id="shodan-plan-info"></span>
+    <!-- Quick Search Bar in header -->
+    <div style="display:flex;gap:6px;flex:1;max-width:500px;margin-left:16px">
+      <input class="s-input" id="shodan-quick-search" placeholder="Quick search: IP, hostname, CVE, or Shodan query…" style="flex:1;font-size:11px;padding:6px 10px" onkeydown="if(event.key==='Enter')shodanQuickSearch()" />
+      <button class="s-btn s-btn-sm" onclick="shodanQuickSearch()">🔍 SEARCH</button>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="s-btn s-btn-sm" onclick="shodanLoadMyIP()">MY IP</button>
+      <button class="s-btn s-btn-sm" onclick="shodanLoadStatus()">↺ STATUS</button>
+    </div>
+  </div>
+
+  <!-- ACCOUNT STAT STRIP -->
+  <div style="display:flex;gap:1px;background:var(--border);border-bottom:1px solid var(--border)">
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">Query Credits</div><div class="s-stat-val" id="sh-qcredits">—</div></div>
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">Scan Credits</div><div class="s-stat-val" id="sh-scredits">—</div></div>
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">Monitored IPs</div><div class="s-stat-val" id="sh-monitored">—</div></div>
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">Plan</div><div class="s-stat-val" style="font-size:14px;padding-top:4px" id="sh-plan">—</div></div>
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">My Public IP</div><div class="s-stat-val" style="font-size:13px;padding-top:4px;cursor:pointer" id="sh-myip" onclick="shodanLookupMyIP()" title="Click to look up this IP">—</div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="shodan-tabs">
+    <div class="s-tab active" onclick="shodanTab(this,'search')">⚡ Search</div>
+    <div class="s-tab" onclick="shodanTab(this,'host')">🔍 Host Lookup</div>
+    <div class="s-tab" onclick="shodanTab(this,'dns')">🌐 DNS Tools</div>
+    <div class="s-tab" onclick="shodanTab(this,'exploits')">💀 Exploits DB</div>
+    <div class="s-tab" onclick="shodanTab(this,'alerts')">🔔 Alerts</div>
+    <div class="s-tab" onclick="shodanTab(this,'scan')">🛰 On-Demand Scan</div>
+    <div class="s-tab" onclick="shodanTab(this,'community')">🗂 Community</div>
+  </div>
+
+  <!-- ── SEARCH (default tab) ── -->
+  <div class="s-pane active" id="s-pane-search">
+    <div style="margin-bottom:10px;font-size:10px;color:var(--muted)">
+      Example filters:&nbsp;
+      <span class="s-tag" style="cursor:pointer" onclick="setSearch('apache port:80 country:US')">Apache US</span>
+      <span class="s-tag" style="cursor:pointer" onclick="setSearch('product:nginx version:1.18')">nginx 1.18</span>
+      <span class="s-tag" style="cursor:pointer" onclick="setSearch('port:22 country:CN')">SSH China</span>
+      <span class="s-tag" style="cursor:pointer" onclick="setSearch('has_vuln:true port:443')">HTTPS vulns</span>
+      <span class="s-tag" style="cursor:pointer" onclick="setSearch('os:Windows RDP port:3389')">RDP</span>
+      <span class="s-tag" style="cursor:pointer" onclick="setSearch('product:MongoDB port:27017')">MongoDB</span>
+      <span class="s-tag" style="cursor:pointer" onclick="setSearch('webcam has_screenshot:true')">Webcams</span>
+    </div>
+    <div class="s-row">
+      <div class="s-input-group" style="flex:3">
+        <label class="s-label">Shodan Query</label>
+        <input class="s-input" id="search-q" placeholder="apache port:80 country:US" onkeydown="if(event.key==='Enter')shodanSearch()" />
+      </div>
+      <div class="s-input-group" style="flex:2">
+        <label class="s-label">Facets (comma-separated)</label>
+        <input class="s-input" id="search-facets" placeholder="country,org,port,asn" value="country,org,port" />
+      </div>
+      <button class="s-btn" onclick="shodanSearch()">SEARCH</button>
+      <button class="s-btn" style="background:#374151" onclick="shodanCount()">COUNT ONLY</button>
+    </div>
+    <div id="search-result" class="s-results"></div>
+    <div class="s-pagination" id="search-pagination" style="display:none">
+      <button class="s-page-btn" id="search-prev" onclick="shodanSearchPage(-1)">◀ PREV</button>
+      <span class="s-page-info" id="search-page-info"></span>
+      <button class="s-page-btn" id="search-next" onclick="shodanSearchPage(+1)">NEXT ▶</button>
+    </div>
+  </div>
+
+  <!-- ── HOST LOOKUP ── -->
+  <div class="s-pane" id="s-pane-host">
+    <div class="s-row">
+      <div class="s-input-group">
+        <label class="s-label">IP Address</label>
+        <input class="s-input" id="host-ip" placeholder="e.g. 8.8.8.8" onkeydown="if(event.key==='Enter')shodanHostLookup()" />
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);cursor:pointer;padding-bottom:9px">
+        <input type="checkbox" id="host-history" /> Include history
+      </label>
+      <button class="s-btn" onclick="shodanHostLookup()">LOOKUP HOST</button>
+    </div>
+    <div id="host-result" class="s-results"></div>
+  </div>
+
+  <!-- ── DNS TOOLS ── -->
+  <div class="s-pane" id="s-pane-dns">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;color:#ff8c42;text-transform:uppercase;margin-bottom:10px;font-family:var(--fmono)">DNS Resolve — Hostname → IP</div>
+        <div class="s-row" style="margin-bottom:0">
+          <div class="s-input-group">
+            <label class="s-label">Hostnames (comma-separated)</label>
+            <input class="s-input" id="dns-hostnames" placeholder="google.com,github.com" />
+          </div>
+          <button class="s-btn" onclick="shodanResolve()">RESOLVE</button>
+        </div>
+        <div id="dns-resolve-result" style="margin-top:10px"></div>
+      </div>
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;color:#ff8c42;text-transform:uppercase;margin-bottom:10px;font-family:var(--fmono)">Reverse DNS — IP → Hostname</div>
+        <div class="s-row" style="margin-bottom:0">
+          <div class="s-input-group">
+            <label class="s-label">IPs (comma-separated)</label>
+            <input class="s-input" id="dns-ips" placeholder="8.8.8.8,1.1.1.1" />
+          </div>
+          <button class="s-btn" onclick="shodanReverse()">REVERSE</button>
+        </div>
+        <div id="dns-reverse-result" style="margin-top:10px"></div>
+      </div>
+    </div>
+    <div style="margin-top:20px">
+      <div style="font-size:10px;letter-spacing:.14em;color:#ff8c42;text-transform:uppercase;margin-bottom:10px;font-family:var(--fmono)">Domain Lookup — Subdomains & DNS Records</div>
+      <div class="s-row">
+        <div class="s-input-group">
+          <label class="s-label">Domain</label>
+          <input class="s-input" id="dns-domain" placeholder="e.g. github.com" onkeydown="if(event.key==='Enter')shodanDomain()" />
+        </div>
+        <button class="s-btn" onclick="shodanDomain()">LOOKUP DOMAIN</button>
+      </div>
+      <div id="dns-domain-result"></div>
+    </div>
+  </div>
+
+  <!-- ── EXPLOITS DB ── -->
+  <div class="s-pane" id="s-pane-exploits">
+    <div style="margin-bottom:10px;font-size:10px;color:var(--muted)">
+      Search by CVE, product, or keyword:&nbsp;
+      <span class="s-tag" style="cursor:pointer" onclick="setExploit('CVE-2021-44228')">Log4Shell</span>
+      <span class="s-tag" style="cursor:pointer" onclick="setExploit('CVE-2014-0160')">Heartbleed</span>
+      <span class="s-tag" style="cursor:pointer" onclick="setExploit('apache struts')">Struts</span>
+      <span class="s-tag" style="cursor:pointer" onclick="setExploit('eternalblue')">EternalBlue</span>
+      <span class="s-tag" style="cursor:pointer" onclick="setExploit('CVE-2022-0778')">OpenSSL</span>
+    </div>
+    <div class="s-row">
+      <div class="s-input-group">
+        <label class="s-label">CVE, product, or keyword</label>
+        <input class="s-input" id="exploit-q" placeholder="e.g. CVE-2021-44228" onkeydown="if(event.key==='Enter')shodanExploits()" />
+      </div>
+      <button class="s-btn" onclick="shodanExploits()">SEARCH EXPLOITS</button>
+    </div>
+    <div id="exploit-result"></div>
+    <div class="s-pagination" id="exploit-pagination" style="display:none">
+      <button class="s-page-btn" onclick="shodanExploitsPage(-1)">◀ PREV</button>
+      <span class="s-page-info" id="exploit-page-info"></span>
+      <button class="s-page-btn" onclick="shodanExploitsPage(+1)">NEXT ▶</button>
+    </div>
+  </div>
+
+  <!-- ── ALERTS ── -->
+  <div class="s-pane" id="s-pane-alerts">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;color:#ff8c42;text-transform:uppercase;margin-bottom:10px;font-family:var(--fmono)">Active Alerts</div>
+        <button class="s-btn s-btn-sm" onclick="shodanLoadAlerts()" style="margin-bottom:12px">REFRESH LIST</button>
+        <div id="alerts-list"></div>
+      </div>
+      <div>
+        <div style="font-size:10px;letter-spacing:.14em;color:#ff8c42;text-transform:uppercase;margin-bottom:10px;font-family:var(--fmono)">Create Alert</div>
+        <div class="s-input-group" style="margin-bottom:10px">
+          <label class="s-label">Alert Name</label>
+          <input class="s-input" id="alert-name" placeholder="My Home Network" />
+        </div>
+        <div class="s-input-group" style="margin-bottom:10px">
+          <label class="s-label">IP / CIDR Range</label>
+          <input class="s-input" id="alert-ip" placeholder="192.168.1.0/24 or 8.8.8.8" />
+        </div>
+        <button class="s-btn" onclick="shodanCreateAlert()">CREATE ALERT</button>
+        <div id="alert-create-result" style="margin-top:10px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ON-DEMAND SCAN ── -->
+  <div class="s-pane" id="s-pane-scan">
+    <div style="background:rgba(255,107,53,.08);border:1px solid rgba(255,107,53,.3);padding:12px 16px;margin-bottom:16px;font-size:11px;color:#ff8c42;line-height:1.7">
+      ⚠ On-demand scans cost <strong>scan credits</strong>. Each IP = 1 scan credit. Check your balance above.
+    </div>
+    <div class="s-row">
+      <div class="s-input-group">
+        <label class="s-label">IPs to scan (comma-separated)</label>
+        <input class="s-input" id="scan-ips" placeholder="8.8.8.8,1.1.1.1" />
+      </div>
+      <button class="s-btn" onclick="shodanRequestScan()">REQUEST SCAN</button>
+    </div>
+    <div id="scan-submit-result"></div>
+    <div style="margin-top:20px">
+      <div style="font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;font-family:var(--fmono)">Check Scan Status</div>
+      <div class="s-row">
+        <div class="s-input-group">
+          <label class="s-label">Scan ID</label>
+          <input class="s-input" id="scan-status-id" placeholder="Scan ID from submission" />
+        </div>
+        <button class="s-btn" onclick="shodanCheckScan()">CHECK STATUS</button>
+      </div>
+      <div id="scan-status-result"></div>
+    </div>
+  </div>
+
+  <!-- ── COMMUNITY ── -->
+  <div class="s-pane" id="s-pane-community">
+    <div class="s-row">
+      <div class="s-input-group">
+        <label class="s-label">Filter community queries</label>
+        <input class="s-input" id="community-q" placeholder="webcam, industrial, router…" onkeydown="if(event.key==='Enter')shodanCommunity()" />
+      </div>
+      <div class="s-input-group" style="flex:0;min-width:130px">
+        <label class="s-label">Sort</label>
+        <select class="s-input" id="community-sort">
+          <option value="votes">Votes</option>
+          <option value="timestamp">Newest</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
+      <button class="s-btn" onclick="shodanCommunity()">LOAD</button>
+    </div>
+    <div id="community-result"></div>
+  </div>
+
+</section>
+
+<!-- ═══════════════════════ FLIGHTRADAR24 SECTION ═══════════════════════ -->
+<section class="fr-section">
+
+  <div class="fr-header">
+    <div class="fr-logo">✈ FLIGHTRADAR24</div>
+    <div class="shodan-key-badge key-miss" id="fr24-key-badge" style="border-color:rgba(56,212,245,.3);color:#38d4f5;background:rgba(56,212,245,.1)">⬤ KEY NOT LOADED</div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="fr-btn fr-btn-sm" onclick="fr24LoadLive()">↺ REFRESH LIVE</button>
+    </div>
+  </div>
+
+  <!-- STAT STRIP -->
+  <div style="display:flex;gap:1px;background:var(--border);border-bottom:1px solid var(--border)">
+    <div class="s-stat-card" style="flex:1;--s-stat-color:#38d4f5"><div class="s-stat-label">Live Flights</div><div class="s-stat-val" style="color:#38d4f5" id="fr-live-count">—</div></div>
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">En Route</div><div class="s-stat-val" style="color:#22c55e" id="fr-enroute-count">—</div></div>
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">Descending</div><div class="s-stat-val" style="color:#f5c842" id="fr-desc-count">—</div></div>
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">Key File</div><div class="s-stat-val" style="font-size:11px;padding-top:4px;color:#38d4f5">FL24_API.txt</div></div>
+  </div>
+
+  <div class="fr-tabs">
+    <div class="fr-tab active" onclick="frTab(this,'live')">📡 Live Flights</div>
+    <div class="fr-tab" onclick="frTab(this,'flight')">🔍 Flight Lookup</div>
+    <div class="fr-tab" onclick="frTab(this,'airport')">🏢 Airport</div>
+  </div>
+
+  <!-- LIVE FLIGHTS -->
+  <div class="fr-pane active" id="fr-pane-live">
+    <div class="s-row" style="margin-bottom:12px">
+      <div class="s-input-group">
+        <label class="s-label">Filter by airline ICAO (optional)</label>
+        <input class="fr-input" id="fr-filter-airline" placeholder="e.g. UAL, DAL, BAW" />
+      </div>
+      <div class="s-input-group">
+        <label class="s-label">Filter by aircraft type (optional)</label>
+        <input class="fr-input" id="fr-filter-aircraft" placeholder="e.g. B738, A320, B77W" />
+      </div>
+      <button class="fr-btn" onclick="fr24LoadLive()">REFRESH</button>
+    </div>
+    <div id="fr-live-result"></div>
+  </div>
+
+  <!-- FLIGHT LOOKUP -->
+  <div class="fr-pane" id="fr-pane-flight">
+    <div class="s-row">
+      <div class="s-input-group">
+        <label class="s-label">FR24 Flight ID or callsign</label>
+        <input class="fr-input" id="fr-flight-id" placeholder="e.g. 3c4a2b or UAL234" onkeydown="if(event.key==='Enter')fr24FlightLookup()" />
+      </div>
+      <button class="fr-btn" onclick="fr24FlightLookup()">LOOKUP FLIGHT</button>
+    </div>
+    <div id="fr-flight-result"></div>
+  </div>
+
+  <!-- AIRPORT -->
+  <div class="fr-pane" id="fr-pane-airport">
+    <div class="s-row">
+      <div class="s-input-group">
+        <label class="s-label">Airport IATA code</label>
+        <input class="fr-input" id="fr-airport-iata" placeholder="e.g. JFK, LHR, LAX" onkeydown="if(event.key==='Enter')fr24AirportLookup()" />
+      </div>
+      <button class="fr-btn" onclick="fr24AirportLookup()">LOOKUP AIRPORT</button>
+    </div>
+    <div id="fr-airport-result"></div>
+  </div>
+
+</section>
+
+<!-- ═══════════════════════ MARINE TRAFFIC SECTION ═══════════════════════ -->
+<section class="mt-section">
+
+  <div class="mt-header">
+    <div class="mt-logo">⚓ MARINE TRAFFIC</div>
+    <div class="mt-key-badge mt-key-miss" id="mt-key-badge">⬤ KEY NOT LOADED</div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="mt-btn mt-btn-sm" onclick="mtLoadVessels()">↺ REFRESH VESSELS</button>
+    </div>
+  </div>
+
+  <!-- STAT STRIP -->
+  <div style="display:flex;gap:1px;background:var(--border);border-bottom:1px solid var(--border)">
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">Vessels Tracked</div><div class="s-stat-val" style="color:#0ea5e9" id="mt-vessel-count">—</div></div>
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">Under Way</div><div class="s-stat-val" style="color:#22c55e" id="mt-underway-count">—</div></div>
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">Moored / Anchored</div><div class="s-stat-val" style="color:#38bdf8" id="mt-moored-count">—</div></div>
+    <div class="s-stat-card" style="flex:1"><div class="s-stat-label">Key File</div><div class="s-stat-val" style="font-size:11px;padding-top:4px;color:#0ea5e9">MT_API.txt</div></div>
+  </div>
+
+  <div class="mt-tabs">
+    <div class="mt-tab active" onclick="mtTab(this,'vessels')">🚢 Live Vessels</div>
+    <div class="mt-tab" onclick="mtTab(this,'vessel-lookup')">🔍 Vessel Lookup</div>
+    <div class="mt-tab" onclick="mtTab(this,'port')">🏗 Port Arrivals</div>
+    <div class="mt-tab" onclick="mtTab(this,'search')">⚡ Search</div>
+  </div>
+
+  <!-- LIVE VESSELS -->
+  <div class="mt-pane active" id="mt-pane-vessels">
+    <div class="s-row" style="margin-bottom:12px">
+      <div class="s-input-group">
+        <label class="s-label">Filter by vessel type (optional)</label>
+        <select class="mt-input" id="mt-filter-type">
+          <option value="">All Types</option>
+          <option value="70">Cargo</option>
+          <option value="80">Tanker</option>
+          <option value="60">Passenger</option>
+          <option value="30">Fishing</option>
+          <option value="52">Tug</option>
+          <option value="35">Military</option>
+        </select>
+      </div>
+      <button class="mt-btn" onclick="mtLoadVessels()">REFRESH</button>
+    </div>
+    <div id="mt-vessels-result"></div>
+  </div>
+
+  <!-- VESSEL LOOKUP -->
+  <div class="mt-pane" id="mt-pane-vessel-lookup">
+    <div class="s-row">
+      <div class="s-input-group">
+        <label class="s-label">MMSI Number</label>
+        <input class="mt-input" id="mt-mmsi" placeholder="e.g. 636019825" onkeydown="if(event.key==='Enter')mtVesselLookup()" />
+      </div>
+      <button class="mt-btn" onclick="mtVesselLookup()">LOOKUP VESSEL</button>
+      <button class="mt-btn" style="background:#374151" onclick="mtPortCalls()">PORT CALLS</button>
+    </div>
+    <div id="mt-vessel-result"></div>
+  </div>
+
+  <!-- PORT ARRIVALS -->
+  <div class="mt-pane" id="mt-pane-port">
+    <div class="s-row">
+      <div class="s-input-group">
+        <label class="s-label">Port ID or UNLOCODE</label>
+        <input class="mt-input" id="mt-port-id" placeholder="e.g. NLRTM (Rotterdam), USLAX" onkeydown="if(event.key==='Enter')mtExpectedArrivals()" />
+      </div>
+      <button class="mt-btn" onclick="mtExpectedArrivals()">EXPECTED ARRIVALS</button>
+    </div>
+    <div id="mt-port-result"></div>
+  </div>
+
+  <!-- VESSEL SEARCH -->
+  <div class="mt-pane" id="mt-pane-search">
+    <div class="s-row">
+      <div class="s-input-group">
+        <label class="s-label">Vessel name, MMSI, or IMO</label>
+        <input class="mt-input" id="mt-search-q" placeholder="e.g. Ever Ace, MSC Gulsun…" onkeydown="if(event.key==='Enter')mtSearch()" />
+      </div>
+      <button class="mt-btn" onclick="mtSearch()">SEARCH VESSELS</button>
+    </div>
+    <div id="mt-search-result"></div>
+  </div>
+
+</section>
+
+<footer class="site-footer">
+  SIGNAL v4.0 &nbsp;·&nbsp; 12 live feeds &nbsp;·&nbsp; Shodan · FlightRadar24 · MarineTraffic &nbsp;·&nbsp; auto-refresh 90s &nbsp;·&nbsp;
+  <a href="/api/feeds" target="_blank">Feed Registry</a> &nbsp;·&nbsp;
+  <a href="/api/healthcheck" target="_blank">Health Check</a> &nbsp;·&nbsp;
+  <a href="/api/keys" target="_blank">API Key Status</a> &nbsp;&middot;&nbsp;
+  <a href="/api/shodan/test" target="_blank">Shodan Diagnostics</a>
+</footer>
+
+<script>
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+const DEFAULTS  = ['hackernews', 'earthquakes', 'crypto'];
+let panelFeeds  = [...DEFAULTS];
+let feedReg     = [];
+const tickerParts = {};
+
+// ══════════════════════════════════════════
+// CLOCK
+// ══════════════════════════════════════════
+function tick() { document.getElementById('clock').textContent = new Date().toUTCString().replace('GMT','UTC'); }
+tick(); setInterval(tick, 1000);
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const pctCls = v => v > 0.05 ? 'up' : v < -0.05 ? 'dn' : 'fl';
+const pctStr = v => (v>=0?'+':'')+v.toFixed(2)+'%';
+const fmtPrice = p => p>=1000 ? '$'+p.toLocaleString('en',{maximumFractionDigits:0}) : p>=1 ? '$'+p.toFixed(2) : '$'+p.toFixed(5);
+const fmtBig  = n => n>=1e9?(n/1e9).toFixed(1)+'B':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(0)+'K':String(n);
+const loading = txt => `<div class="s-loading"><div class="spinner"></div>${esc(txt||'Loading…')}</div>`;
+const errBox  = msg => `<div class="s-error">⚠ ${esc(String(msg))}</div>`;
+
+function setStatus(i, state) {
+  const el = document.getElementById(`status-${i}`);
+  const MAP = { live:['status-live','LIVE'], demo:['status-demo','DEMO'],
+                error:['status-error','ERR'], no_key:['status-demo','NO KEY'] };
+  const [cls, lbl] = MAP[state] || MAP.error;
+  el.className = 'panel-status ' + cls;
+  el.innerHTML = `<span class="sdot"></span><span>${lbl}</span>`;
+}
+function setAccent(i, color) {
+  const el = document.getElementById(`accent-${i}`);
+  el.style.background = color; el.style.boxShadow = `0 0 8px ${color}`;
+}
+function setSummary(i, label, val, sub) {
+  document.getElementById(`sl-${i}`).textContent = label;
+  document.getElementById(`sv-${i}`).textContent = val;
+  document.getElementById(`ss-${i}`).textContent = sub;
+}
+function updateTicker(feedId, color, label, items) {
+  const bg = color + '22';
+  tickerParts[feedId] = items.map(t =>
+    `<div class="ticker-item"><span class="tag" style="background:${bg};color:${color}">${esc(label.substring(0,6).toUpperCase())}</span>${esc(String(t).substring(0,70))}</div>`
+  ).join('');
+  const combined = Object.values(tickerParts).join('');
+  document.getElementById('ticker').innerHTML = combined + combined;
+}
+
+// ══════════════════════════════════════════
+// FEED REGISTRY + DROPDOWNS
+// ══════════════════════════════════════════
+async function loadRegistry() {
+  try {
+    feedReg = await (await fetch('/api/feeds')).json();
+    for (let i = 0; i < 3; i++) {
+      document.getElementById(`select-${i}`).innerHTML =
+        feedReg.map(f => `<option value="${f.id}"${f.id===panelFeeds[i]?' selected':''}>${f.label}</option>`).join('');
+    }
+  } catch(e) { console.error('Registry load failed:', e); }
+}
+
+function switchFeed(i, feedId) {
+  panelFeeds[i] = feedId;
+  const info = feedReg.find(f => f.id === feedId);
+  if (info) setAccent(i, info.color);
+  document.getElementById(`body-${i}`).innerHTML = loading('SWITCHING…');
+  loadPanel(i);
+}
+
+// ══════════════════════════════════════════
+// PANEL LOADER
+// ══════════════════════════════════════════
+async function loadPanel(i) {
+  const feedId = panelFeeds[i];
+  const info   = feedReg.find(f => f.id === feedId) || { label: feedId, source:'—', color:'#00ffe0' };
+  document.getElementById(`title-${i}`).textContent  = info.label;
+  document.getElementById(`source-${i}`).textContent = info.source;
+  setAccent(i, info.color);
+  try {
+    const data = await (await fetch(`/api/feed/${feedId}`)).json();
+    setStatus(i, data.status || 'demo');
+    document.getElementById(`fsrc-${i}`).textContent = info.source;
+    document.getElementById(`fts-${i}`).textContent  = data.updated || '—';
+    renderFeed(feedId, data, document.getElementById(`body-${i}`), i, info);
+  } catch(e) {
+    document.getElementById(`body-${i}`).innerHTML = `<div class="state-msg" style="color:#ef4444">&#9888; ${esc(String(e))}</div>`;
+  }
+}
+
+async function refreshAll() {
+  for (let i = 0; i < 3; i++) await loadPanel(i);
+}
+
+// ══════════════════════════════════════════
+// RENDERERS DISPATCH
+// ══════════════════════════════════════════
+function renderFeed(id, data, body, i, info) {
+  const R = {
+    hackernews:renderHN, earthquakes:renderEQ, crypto:renderCrypto,
+    weather:renderWeather, github:renderGitHub, spacex:renderSpaceX,
+    reddit:renderReddit, nasa:renderNASA, stocks:renderStocks,
+    shodan:renderShodan, flightradar:renderFlightRadar, marinetraffic:renderMarine
+  };
+  if (R[id]) R[id](data, body, i, info);
+  else body.innerHTML = `<div class="state-msg">No renderer for: ${esc(id)}</div>`;
+}
+
+// ══════════════════════════════════════════
+// STANDARD FEED RENDERERS
+// ══════════════════════════════════════════
+function renderHN(data, body, i, info) {
+  const s = data.stories || [];
+  setSummary(i, info.label, s.length, 'stories loaded');
+  updateTicker(info.id, info.color, info.label, s.slice(0,5).map(x=>`▲${x.score} ${x.title}`));
+  body.innerHTML = s.map((s,n) =>
+    `<a class="hn-item" href="${esc(s.url)}" target="_blank" rel="noopener">
+      <div class="hn-rank">${String(n+1).padStart(2,'0')}</div>
+      <div>
+        <div class="hn-title">${esc(s.title)}</div>
+        <div class="hn-meta"><span class="hn-score">&#9650; ${s.score}</span><span>&#128172; ${s.comments}</span><span>${esc(s.by)}</span><span>${esc(s.time)}</span></div>
+      </div>
+    </a>`).join('');
+}
+
+function renderEQ(data, body, i, info) {
+  const q = data.quakes || [];
+  setSummary(i, info.label, data.count||q.length, 'M2.5+ last 24h');
+  updateTicker(info.id, info.color, info.label, q.slice(0,5).map(x=>`M${x.mag} ${x.place}`));
+  body.innerHTML = q.map(q => {
+    const cls = q.mag>=6?'mag-hi':q.mag>=4.5?'mag-mi':'mag-lo';
+    const bc  = q.mag>=6?'#ff3e6c':q.mag>=4.5?'#f97316':'#f5c842';
+    return `<div class="eq-item">
+      <div class="eq-mag ${cls}">${q.mag.toFixed(1)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="eq-place">${esc(q.place)}</div>
+        <div class="eq-meta"><span>&#11015; ${q.depth}km</span><span>${esc(q.time)}</span></div>
+      </div>
+      <div class="eq-bar" style="background:${bc};opacity:${Math.min(1,q.mag/7)}"></div>
+    </div>`;
+  }).join('');
+}
+
+function renderCrypto(data, body, i, info) {
+  const c = data.coins || [];
+  const btc = c.find(x=>x.symbol==='BTC');
+  setSummary(i, info.label, btc?fmtPrice(btc.price):'—', btc?pctStr(btc.change_24h)+' 24h':'');
+  updateTicker(info.id, info.color, info.label, c.slice(0,6).map(x=>`${x.symbol} ${fmtPrice(x.price)} ${pctStr(x.change_24h)}`));
+  body.innerHTML =
+    `<div class="tbl-head"><span>Asset</span><span style="text-align:right">Price</span><span style="text-align:right">1h</span><span style="text-align:right">24h</span><span style="text-align:right">7d</span></div>` +
+    c.map(c=>`<div class="crypto-row">
+      <div class="cr-name"><div class="cr-sym">${esc(c.symbol)}</div><div class="cr-full">${esc(c.name)}</div></div>
+      <div class="cr-price">${fmtPrice(c.price)}</div>
+      <div class="cr-pct ${pctCls(c.change_1h)}">${pctStr(c.change_1h)}</div>
+      <div class="cr-pct ${pctCls(c.change_24h)}">${pctStr(c.change_24h)}</div>
+      <div class="cr-pct ${pctCls(c.change_7d)}">${pctStr(c.change_7d)}</div>
+    </div>`).join('');
+}
+
+function renderWeather(data, body, i, info) {
+  const c = data.cities || [];
+  setSummary(i, info.label, c.length, 'cities monitored');
+  updateTicker(info.id, info.color, info.label, c.map(x=>`${x.icon} ${x.city} ${x.temp}°F`));
+  body.innerHTML = c.map(c=>`<div class="wx-item">
+    <div class="wx-icon">${c.icon}</div>
+    <div>
+      <div class="wx-city">${esc(c.city)}</div>
+      <div class="wx-cond">${esc(c.condition)}</div>
+      <div class="wx-stats"><span>&#128167; ${c.humidity}%</span><span>&#128168; ${c.wind}mph</span></div>
+    </div>
+    <div class="wx-temp"><div class="wx-main">${c.temp}°F</div><div class="wx-feels">feels ${c.feels}°F</div></div>
+  </div>`).join('');
+}
+
+function renderGitHub(data, body, i, info) {
+  const r = data.repos || [];
+  setSummary(i, info.label, r.length, 'trending repos');
+  updateTicker(info.id, info.color, info.label, r.slice(0,5).map(x=>`&#9733;${fmtBig(x.stars)} ${x.name}`));
+  body.innerHTML = r.map(r=>`<div class="gh-item">
+    <div class="gh-name">${esc(r.name)}</div>
+    <div class="gh-desc">${esc(r.desc||'No description')}</div>
+    <div class="gh-meta">
+      <span class="gh-stars">&#9733; ${fmtBig(r.stars)}</span>
+      <span>&#9334; ${fmtBig(r.forks)}</span>
+      <span class="gh-lang">${esc(r.lang||'—')}</span>
+      <span class="gh-delta">+${r.delta} today</span>
+    </div>
+  </div>`).join('');
+}
+
+function renderSpaceX(data, body, i, info) {
+  const l = data.launches || [];
+  const ok = l.filter(x=>x.status==='Success').length;
+  setSummary(i, info.label, `${ok}/${l.length}`, 'successful launches');
+  updateTicker(info.id, info.color, info.label, l.slice(0,5).map(x=>`&#128640; ${x.mission} — ${x.status}`));
+  body.innerHTML = l.map(l=>{
+    const sc = {Success:'st-success',Failure:'st-failure',Partial:'st-partial',TBD:'st-tbd'}[l.status]||'st-tbd';
+    return `<div class="sx-item">
+      <span class="sx-status ${sc}">${esc(l.status)}</span>
+      <div style="flex:1;min-width:0">
+        <div class="sx-mission">${esc(l.mission)}</div>
+        <div class="sx-meta">${esc(l.date)} · ${esc(l.site)}</div>
+      </div>
+      <div class="sx-rocket">${esc(l.rocket)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderReddit(data, body, i, info) {
+  const p = data.posts || [];
+  setSummary(i, info.label, fmtBig(p.reduce((a,x)=>a+x.upvotes,0)), 'total upvotes');
+  updateTicker(info.id, info.color, info.label, p.slice(0,5).map(x=>`${x.sub} — ${x.title}`));
+  body.innerHTML = p.map(p=>`<a class="rd-item" href="${esc(p.url)}" target="_blank" rel="noopener">
+    <div class="rd-votes">${fmtBig(p.upvotes)}</div>
+    <div>
+      <div class="rd-sub">${esc(p.sub)}</div>
+      <div class="rd-title">${esc(p.title)}</div>
+      <div class="rd-comments">&#128172; ${fmtBig(p.comments)} comments</div>
+    </div>
+  </a>`).join('');
+}
+
+function renderNASA(data, body, i, info) {
+  const items = data.items || [];
+  setSummary(i, info.label, items.length, 'space updates');
+  updateTicker(info.id, info.color, info.label, items.slice(0,5).map(x=>`&#128640; ${x.title}`));
+  body.innerHTML = items.map(n=>`<div class="na-item">
+    <div class="na-cat">${esc(n.category)}</div>
+    <div class="na-title">${esc(n.title)}</div>
+    <div class="na-date">${esc(n.date)}</div>
+  </div>`).join('');
+}
+
+function renderStocks(data, body, i, info) {
+  const s = data.stocks || [];
+  const up = s.filter(x=>x.pct>0).length;
+  setSummary(i, info.label, `${up}/${s.length}`, 'gainers today');
+  updateTicker(info.id, info.color, info.label, s.slice(0,6).map(x=>`${x.symbol} $${x.price.toFixed(2)} ${pctStr(x.pct)}`));
+  body.innerHTML =
+    `<div class="sk-head"><span>Symbol</span><span style="text-align:right">Price</span><span style="text-align:right">Change</span><span style="text-align:right">%</span></div>` +
+    s.map(s=>`<div class="sk-row">
+      <div><div class="sk-sym">${esc(s.symbol)}</div><div class="sk-name">${esc(s.name)}</div></div>
+      <div class="sk-price">$${s.price.toFixed(2)}</div>
+      <div class="sk-chg ${pctCls(s.change)}">${s.change>=0?'+':''}${s.change.toFixed(2)}</div>
+      <div class="sk-chg ${pctCls(s.pct)}">${pctStr(s.pct)}</div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// SHODAN PANEL RENDERER (single dropdown entry)
+// ══════════════════════════════════════════
+function renderShodan(data, body, i, info) {
+  if (data.status === 'no_key' || data.status === 'error') {
+    setSummary(i, info.label, '—', 'no API key');
+    body.innerHTML = `<div class="s-no-key">
+      <div class="s-no-key-icon">🔑</div>
+      <div class="s-no-key-title">API KEY REQUIRED</div>
+      <div class="s-no-key-sub">Add your Shodan API key to <strong>Shodan_API.txt</strong> next to SIGNAL.py, then restart.</div>
+      <div class="s-no-key-code">Shodan_API.txt</div>
+      ${data.error ? `<div style="font-size:10px;color:#ef4444">${esc(data.error)}</div>` : ''}
+    </div>`; return;
+  }
+  setSummary(i, info.label, data.query_credits, 'query credits');
+  updateTicker(info.id, info.color, info.label,
+    (data.top_queries||[]).map(q=>`👁 ${q.title||q.query}`));
+  const stats = [
+    ['Plan', data.plan], ['Query Credits', data.query_credits],
+    ['Scan Credits', data.scan_credits], ['Monitored IPs', data.monitored_ips],
+  ];
+  body.innerHTML = `
+    <div style="padding:14px">
+      <div class="s-kv" style="margin-bottom:14px">
+        ${stats.map(([k,v])=>`<div class="s-kv-item"><div class="s-kv-key">${k}</div><div class="s-kv-val" style="color:#ff8c42">${esc(String(v??'—'))}</div></div>`).join('')}
+      </div>
+      <div style="font-size:9px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:8px;font-family:var(--fmono)">Top Community Queries</div>
+      ${(data.top_queries||[]).map(q=>`<div style="padding:7px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;color:#e8eaf2;margin-bottom:2px">${esc(q.title||q.query)}</div>
+        <div style="font-family:var(--fmono);font-size:10px;color:#ff8c42">${esc(q.query)}</div>
+      </div>`).join('')}
+      <div style="margin-top:12px;font-size:10px;color:var(--muted)">↓ Use the full Shodan Intelligence section below ↓</div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+// FLIGHTRADAR24 PANEL RENDERER
+// ══════════════════════════════════════════
+function renderFlightRadar(data, body, i, info) {
+  const flights = data.flights || [];
+  const enroute = flights.filter(f=>f.status==='En Route').length;
+  setSummary(i, info.label, flights.length, 'flights tracked');
+  updateTicker(info.id, info.color, info.label,
+    flights.slice(0,6).map(f=>`✈ ${f.callsign} ${f.origin}→${f.dest} FL${Math.round((f.alt||0)/100)}`));
+  body.innerHTML = flights.map(f => {
+    const stCls = f.status==='En Route'?'fr-en-route':f.status==='Descending'?'fr-descending':'fr-landed';
+    return `<div class="fr-flight-row">
+      <div class="fr-callsign">${esc(f.callsign||'—')}</div>
+      <div style="flex:1;min-width:0">
+        <div class="fr-route">${esc(f.origin||'—')} → ${esc(f.dest||'—')}</div>
+        <div class="fr-airline">${esc(f.airline||'—')} · ${esc(f.aircraft||'—')}</div>
+      </div>
+      <div class="fr-stats">
+        <div class="fr-alt">FL${Math.round((f.alt||0)/100)}</div>
+        <div>${f.speed||0} kts</div>
+        <div style="margin-top:2px"><span class="fr-badge ${stCls}">${esc(f.status||'—')}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+  if (data.status === 'no_key' || data.error) {
+    body.insertAdjacentHTML('afterbegin', `<div style="padding:8px 14px;font-size:10px;color:#f5c842;border-bottom:1px solid var(--border)">⚠ ${esc(data.error||'No key')} — showing demo data</div>`);
+  }
+}
+
+// ══════════════════════════════════════════
+// MARINE TRAFFIC PANEL RENDERER
+// ══════════════════════════════════════════
+function renderMarine(data, body, i, info) {
+  const vessels = data.vessels || [];
+  const underway = vessels.filter(v=>String(v.status).toLowerCase().includes('under')).length;
+  setSummary(i, info.label, vessels.length, 'vessels tracked');
+  updateTicker(info.id, info.color, info.label,
+    vessels.slice(0,6).map(v=>`⚓ ${v.name} → ${v.dest||'—'} ${v.speed}kn`));
+  body.innerHTML = vessels.map(v => {
+    const st = String(v.status||'').toLowerCase();
+    const stCls = st.includes('under')?'mt-underway':st.includes('moor')?'mt-moored':'mt-anchored';
+    return `<div class="mt-vessel-row">
+      <div>
+        <div class="mt-vessel-name" title="${esc(v.name)}">${esc(v.name)}</div>
+        <div class="mt-vessel-type">${esc(v.type||'—')} · ${esc(v.flag||'—')}</div>
+      </div>
+      <div style="flex:1;min-width:0;margin-left:10px">
+        <div class="mt-dest">${esc(v.dest||'—')}</div>
+        <div class="mt-dest-sub">MMSI: ${esc(v.mmsi||'—')}</div>
+      </div>
+      <div class="mt-speed">
+        <div>${v.speed||0} kn</div>
+        <div style="margin-top:3px"><span class="mt-status-badge ${stCls}">${esc(v.status||'—')}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+  if (data.status === 'no_key' || data.error) {
+    body.insertAdjacentHTML('afterbegin', `<div style="padding:8px 14px;font-size:10px;color:#38bdf8;border-bottom:1px solid var(--border)">⚠ ${esc(data.error||'No key')} — showing demo data</div>`);
+  }
+}
+
+// ══════════════════════════════════════════
+// KEY STATUS INIT
+// ══════════════════════════════════════════
+async function initKeyBadges() {
+  try {
+    const ks = await (await fetch('/api/keys')).json();
+    // Shodan
+    const sb = document.getElementById('shodan-key-badge');
+    if (ks.shodan?.loaded) {
+      sb.className = 'shodan-key-badge key-ok';
+      sb.textContent = `⬤ KEY LOADED (${ks.shodan.hint})`;
+    } else {
+      sb.className = 'shodan-key-badge key-miss';
+      sb.textContent = '⬤ KEY NOT LOADED — add to Shodan_API.txt';
+    }
+    // FR24
+    const fb = document.getElementById('fr24-key-badge');
+    if (ks.flightradar?.loaded) {
+      fb.textContent = `⬤ KEY LOADED (${ks.flightradar.hint})`;
+      fb.style.color = '#22c55e'; fb.style.borderColor = 'rgba(34,197,94,.3)'; fb.style.background = 'rgba(34,197,94,.1)';
+    } else {
+      fb.textContent = '⬤ KEY NOT LOADED — add to FL24_API.txt';
+    }
+    // MarineTraffic
+    const mb = document.getElementById('mt-key-badge');
+    if (ks.marinetraffic?.loaded) {
+      mb.className = 'mt-key-badge mt-key-ok';
+      mb.textContent = `⬤ KEY LOADED (${ks.marinetraffic.hint})`;
+    } else {
+      mb.className = 'mt-key-badge mt-key-miss';
+      mb.textContent = '⬤ KEY NOT LOADED — add to MT_API.txt';
+    }
+  } catch(e) { console.warn('Key badge init failed:', e); }
+}
+
+// ══════════════════════════════════════════
+// SHODAN INTERACTIVE
+// ══════════════════════════════════════════
+let shodanSearchPage_ = 1, shodanExploitPage_ = 1;
+
+function shodanTab(el, name) {
+  document.querySelectorAll('.s-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.s-pane').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(`s-pane-${name}`).classList.add('active');
+}
+
+async function shodanLoadStatus() {
+  try {
+    const st = await (await fetch('/api/feed/shodan')).json();
+    if (st.plan) {
+      document.getElementById('sh-qcredits').textContent = st.query_credits ?? '—';
+      document.getElementById('sh-scredits').textContent = st.scan_credits  ?? '—';
+      document.getElementById('sh-monitored').textContent= st.monitored_ips ?? '—';
+      document.getElementById('sh-plan').textContent     = st.plan          ?? '—';
+      document.getElementById('shodan-plan-info').textContent = `Plan: ${st.plan}`;
+    }
+  } catch(e) {}
+}
+
+async function shodanLoadMyIP() {
+  try {
+    const d = await (await fetch('/api/shodan/myip')).json();
+    if (d.ip) document.getElementById('sh-myip').textContent = d.ip;
+  } catch(e) {}
+}
+
+function shodanLookupMyIP() {
+  const ip = document.getElementById('sh-myip').textContent;
+  if (ip && ip !== '—') {
+    document.getElementById('host-ip').value = ip;
+    document.querySelector('[onclick*="shodanTab"][onclick*="host"]').click();
+    shodanHostLookup();
+  }
+}
+
+// Quick search — auto-detect IP vs hostname vs query
+async function shodanQuickSearch() {
+  const q = document.getElementById('shodan-quick-search').value.trim();
+  if (!q) return;
+  const isIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(q);
+  const isCVE = /^CVE-\d{4}-\d+$/i.test(q);
+  if (isIP) {
+    document.getElementById('host-ip').value = q;
+    document.querySelector('.s-tab[onclick*="host"]').click();
+    shodanHostLookup();
+  } else if (isCVE) {
+    document.getElementById('exploit-q').value = q;
+    document.querySelector('.s-tab[onclick*="exploits"]').click();
+    shodanExploits();
+  } else {
+    document.getElementById('search-q').value = q;
+    document.querySelector('.s-tab[onclick*="search"]').click();
+    shodanSearch();
+  }
+}
+
+// HOST LOOKUP
+async function shodanHostLookup() {
+  const ip = document.getElementById('host-ip').value.trim();
+  const res = document.getElementById('host-result');
+  if (!ip) { res.innerHTML = errBox('Enter an IP address'); return; }
+  res.innerHTML = loading(`Looking up ${ip}…`);
+  try {
+    const hist = document.getElementById('host-history').checked;
+    const d = await (await fetch(`/api/shodan/host/${encodeURIComponent(ip)}?history=${hist}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error + (d.detail?' — '+d.detail:'')); return; }
+    const vuln_html = Object.entries(d.vulns||{}).map(([id,v])=>{
+      const cls = v.cvss>=7?'cvss-hi':v.cvss>=4?'cvss-mi':'cvss-lo';
+      return `<div class="s-vuln"><div class="s-vuln-id">${esc(id)}</div><div class="s-vuln-cvss ${cls}">${v.cvss||'?'}</div><div class="s-vuln-summary">${esc(v.summary)}</div></div>`;
+    }).join('');
+    const svc_html = (d.services||[]).map(s=>`<div class="s-port-row">
+      <div class="s-port-num">${s.port}</div>
+      <div class="s-port-proto">${esc(s.transport)}</div>
+      <div class="s-port-product">${esc([s.product,s.version].filter(Boolean).join(' ')||s.module||'—')}</div>
+      ${s.vulns&&s.vulns.length?`<div class="s-port-vulns">⚠ ${s.vulns.length} CVE</div>`:''}
+    </div>${s.banner?`<div class="s-banner" style="margin:0 14px 4px">${esc(s.banner)}</div>`:''}`).join('');
+    res.innerHTML = `<div class="s-card">
+      <div class="s-card-header">
+        <div class="s-card-title">${esc(d.ip)}</div>
+        ${d.tags.map(t=>`<span class="s-tag">${esc(t)}</span>`).join('')}
+        ${d.vuln_count?`<span style="background:rgba(239,68,68,.15);color:#ef4444;font-size:10px;padding:2px 8px;font-family:var(--fmono)">⚠ ${d.vuln_count} CVE${d.vuln_count>1?'s':''}</span>`:''}
+      </div>
+      <div class="s-card-body">
+        <div class="s-kv" style="margin-bottom:12px">
+          ${[['Org',d.org],['ISP',d.isp],['ASN',d.asn],['OS',d.os||'Unknown'],['Country',d.country],['City',d.city],['Last Update',d.last_update],['Open Ports',(d.ports||[]).join(', ')||'—'],['Hostnames',(d.hostnames||[]).join(', ')||'—']].map(([k,v])=>`<div class="s-kv-item"><div class="s-kv-key">${k}</div><div class="s-kv-val">${esc(String(v||'—'))}</div></div>`).join('')}
+        </div>
+        ${svc_html?`<div style="font-size:9px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;font-family:var(--fmono)">${d.service_count} Services</div>${svc_html}`:''}
+        ${vuln_html?`<div style="font-size:9px;letter-spacing:.14em;color:#ef4444;text-transform:uppercase;margin:12px 0 6px;font-family:var(--fmono)">Vulnerabilities (${d.vuln_count})</div>${vuln_html}`:''}
+      </div>
+    </div>`;
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+// SEARCH
+function setSearch(q) { document.getElementById('search-q').value = q; shodanSearch(); }
+
+async function shodanSearch(page) {
+  const q = document.getElementById('search-q').value.trim();
+  const facets = document.getElementById('search-facets').value.trim();
+  if (!q) return;
+  page = page || 1; shodanSearchPage_ = page;
+  const res = document.getElementById('search-result');
+  res.innerHTML = loading('Searching…');
+  document.getElementById('search-pagination').style.display = 'none';
+  try {
+    const p = new URLSearchParams({q, page, ...(facets?{facets}:{})});
+    const d = await (await fetch(`/api/shodan/search?${p}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    const matches_html = (d.matches||[]).map(m=>`<div class="s-match-row" title="${esc(m.banner)}">
+      <div class="s-match-ip" onclick="quickHostLookup('${esc(m.ip)}')">${esc(m.ip)}</div>
+      <div class="s-match-port">${m.port}/${esc(m.transport)}</div>
+      <div class="s-match-info">${esc([m.product,m.version].filter(Boolean).join(' ')||m.banner.slice(0,60)||'—')}${m.vulns&&m.vulns.length?` <span class="s-port-vulns">⚠${m.vulns.length}</span>`:''}</div>
+      <div class="s-match-org">${esc(m.org||m.isp||'—')}</div>
+    </div>`).join('');
+    const facets_html = Object.entries(d.facets||{}).map(([name,vals])=>`<div class="s-facet-block">
+      <div class="s-facet-label">${esc(name)}</div>
+      ${vals.slice(0,8).map(v=>`<div class="s-facet-item"><span>${esc(String(v.value))}</span><span class="s-facet-count">${v.count.toLocaleString()}</span></div>`).join('')}
+    </div>`).join('');
+    res.innerHTML = `<div style="font-size:10px;color:var(--muted);font-family:var(--fmono);margin-bottom:10px">${d.total.toLocaleString()} results for <span style="color:#ff8c42">${esc(q)}</span> · Page ${page}</div>
+      <div style="display:grid;grid-template-columns:140px 60px 1fr 100px;gap:8px;padding:4px 14px;font-size:9px;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--border);text-transform:uppercase"><span>IP</span><span>Port</span><span>Service</span><span style="text-align:right">Org</span></div>
+      ${matches_html}
+      ${facets_html?`<div style="font-size:9px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin:12px 0 6px;font-family:var(--fmono)">Facets</div><div class="s-facets">${facets_html}</div>`:''}`;
+    if (d.total > 10) {
+      document.getElementById('search-pagination').style.display = 'flex';
+      document.getElementById('search-page-info').textContent = `Page ${page} of ${Math.ceil(d.total/10)}`;
+      document.getElementById('search-prev').disabled = page <= 1;
+      document.getElementById('search-next').disabled = (page*10) >= d.total;
+    }
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function shodanSearchPage(dir) { shodanSearch(Math.max(1, shodanSearchPage_ + dir)); }
+
+async function shodanCount() {
+  const q = document.getElementById('search-q').value.trim();
+  const facets = document.getElementById('search-facets').value.trim() || 'country,org,port';
+  if (!q) return;
+  const res = document.getElementById('search-result');
+  res.innerHTML = loading('Counting (no credits used)…');
+  try {
+    const d = await (await fetch(`/api/shodan/count?q=${encodeURIComponent(q)}&facets=${encodeURIComponent(facets)}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    const facets_html = Object.entries(d.facets||{}).map(([name,vals])=>`<div class="s-facet-block">
+      <div class="s-facet-label">${esc(name)}</div>
+      ${vals.slice(0,10).map(v=>`<div class="s-facet-item"><span>${esc(String(v.value))}</span><span class="s-facet-count">${v.count.toLocaleString()}</span></div>`).join('')}
+    </div>`).join('');
+    res.innerHTML = `<div style="font-family:var(--fmono);margin-bottom:12px"><span style="font-size:24px;color:#ff8c42;font-weight:700">${d.total.toLocaleString()}</span> results for <span style="color:#ff8c42">${esc(q)}</span> <span style="color:var(--muted);font-size:10px">(count only — 0 credits used)</span></div>
+      ${facets_html?`<div class="s-facets">${facets_html}</div>`:''}`;
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+function quickHostLookup(ip) {
+  document.getElementById('host-ip').value = ip;
+  document.querySelector('.s-tab[onclick*="host"]').click();
+  shodanHostLookup();
+}
+
+// DNS TOOLS
+async function shodanResolve() {
+  const h = document.getElementById('dns-hostnames').value.trim();
+  const res = document.getElementById('dns-resolve-result');
+  if (!h) return;
+  res.innerHTML = loading('Resolving…');
+  try {
+    const d = await (await fetch(`/api/shodan/resolve?hostnames=${encodeURIComponent(h)}`)).json();
+    res.innerHTML = d.error ? errBox(d.error) : Object.entries(d.results||{}).map(([host,ip])=>`
+      <div class="s-dns-result"><span class="s-dns-host">${esc(host)}</span><span class="s-dns-arrow">→</span><span class="s-dns-ip">${esc(ip||'—')}</span></div>`).join('');
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function shodanReverse() {
+  const ips = document.getElementById('dns-ips').value.trim();
+  const res  = document.getElementById('dns-reverse-result');
+  if (!ips) return;
+  res.innerHTML = loading('Reverse resolving…');
+  try {
+    const d = await (await fetch(`/api/shodan/reverse?ips=${encodeURIComponent(ips)}`)).json();
+    res.innerHTML = d.error ? errBox(d.error) : Object.entries(d.results||{}).map(([ip,hosts])=>`
+      <div class="s-dns-result"><span class="s-dns-ip">${esc(ip)}</span><span class="s-dns-arrow">→</span><span class="s-dns-host">${esc((hosts||[]).join(', ')||'—')}</span></div>`).join('');
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function shodanDomain() {
+  const domain = document.getElementById('dns-domain').value.trim();
+  const res = document.getElementById('dns-domain-result');
+  if (!domain) return;
+  res.innerHTML = loading(`Looking up ${domain}…`);
+  try {
+    const d = await (await fetch(`/api/shodan/domain/${encodeURIComponent(domain)}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    const sub_html = (d.subdomains||[]).length
+      ? `<div style="margin-bottom:10px"><div class="s-kv-key" style="margin-bottom:6px">Subdomains (${d.subdomains.length})</div><div class="s-subdomain-list">${d.subdomains.map(s=>`<span class="s-subdomain">${esc(s)}.${esc(domain)}</span>`).join('')}</div></div>` : '';
+    const rec_html = (d.data||[]).slice(0,20).map(r=>`
+      <div class="s-dns-result"><span class="s-dns-host">${esc(r.subdomain||'@')}</span><span class="s-dns-arrow">${esc(r.type)}</span><span class="s-dns-ip">${esc(r.value)}</span></div>`).join('');
+    res.innerHTML = `<div class="s-card"><div class="s-card-header"><div class="s-card-title">${esc(d.domain)}</div>${(d.tags||[]).map(t=>`<span class="s-tag">${esc(t)}</span>`).join('')}</div><div class="s-card-body">${sub_html}${rec_html}</div></div>`;
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+// EXPLOITS
+function setExploit(q) { document.getElementById('exploit-q').value = q; shodanExploits(); }
+
+async function shodanExploits(page) {
+  const q = document.getElementById('exploit-q').value.trim();
+  if (!q) return;
+  page = page || 1; shodanExploitPage_ = page;
+  const res = document.getElementById('exploit-result');
+  res.innerHTML = loading('Searching exploits…');
+  document.getElementById('exploit-pagination').style.display = 'none';
+  try {
+    const d = await (await fetch(`/api/shodan/exploits?q=${encodeURIComponent(q)}&page=${page}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    res.innerHTML = `<div style="font-size:10px;color:var(--muted);font-family:var(--fmono);margin-bottom:10px">${d.total.toLocaleString()} exploits · Page ${page}</div>` +
+      (d.exploits||[]).map(e=>`<div class="s-exploit-row">
+        <div class="s-exploit-title">${esc(e.title||'Untitled')}</div>
+        <div class="s-exploit-meta">
+          ${e.cve&&e.cve.length?`<span class="s-exploit-cve">${e.cve.join(', ')}</span>`:''}
+          ${e.type?`<span class="s-exploit-type">${esc(e.type)}</span>`:''}
+          ${e.cvss?`<span class="s-vuln-cvss ${e.cvss>=7?'cvss-hi':e.cvss>=4?'cvss-mi':'cvss-lo'}">CVSS ${e.cvss}</span>`:''}
+          ${e.date?`<span>${esc(e.date.slice(0,10))}</span>`:''}
+          ${e.url?`<a href="${esc(e.url)}" target="_blank" class="s-exploit-src" style="text-decoration:none">↗ Source</a>`:''}
+        </div>
+      </div>`).join('');
+    if (d.total > 10) {
+      document.getElementById('exploit-pagination').style.display = 'flex';
+      document.getElementById('exploit-page-info').textContent = `Page ${page} of ${Math.ceil(d.total/10)}`;
+    }
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function shodanExploitsPage(dir) { shodanExploits(Math.max(1, shodanExploitPage_ + dir)); }
+
+// ALERTS
+async function shodanLoadAlerts() {
+  const el = document.getElementById('alerts-list');
+  el.innerHTML = loading('Loading alerts…');
+  try {
+    const d = await (await fetch('/api/shodan/alerts')).json();
+    if (d.error) { el.innerHTML = errBox(d.error); return; }
+    if (!d.alerts.length) { el.innerHTML = '<div style="color:var(--muted);font-size:11px">No alerts configured.</div>'; return; }
+    el.innerHTML = d.alerts.map(a=>`<div class="s-alert-row">
+      <div>
+        <div class="s-alert-name">${esc(a.name)}</div>
+        <div class="s-alert-meta">IPs: ${a.size} · ${esc(a.created.slice(0,10))}</div>
+        <div class="s-alert-id">${esc(a.id)}</div>
+      </div>
+      <button class="s-btn s-btn-sm s-btn-danger" onclick="shodanDeleteAlert('${esc(a.id)}')">DELETE</button>
+    </div>`).join('');
+  } catch(e) { el.innerHTML = errBox(e); }
+}
+
+async function shodanCreateAlert() {
+  const name = document.getElementById('alert-name').value.trim();
+  const ip   = document.getElementById('alert-ip').value.trim();
+  const res  = document.getElementById('alert-create-result');
+  if (!name||!ip) { res.innerHTML = errBox('Name and IP required'); return; }
+  res.innerHTML = loading('Creating…');
+  try {
+    const d = await (await fetch('/api/shodan/alerts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,ip})})).json();
+    res.innerHTML = d.error ? errBox(d.error) : `<div style="color:var(--live);font-family:var(--fmono);font-size:11px">✓ Alert created (ID: ${esc(d.alert?.id||'—')})</div>`;
+    if (!d.error) shodanLoadAlerts();
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function shodanDeleteAlert(id) {
+  if (!confirm(`Delete alert ${id}?`)) return;
+  try { await fetch(`/api/shodan/alerts/${encodeURIComponent(id)}`,{method:'DELETE'}); shodanLoadAlerts(); }
+  catch(e) { alert('Delete failed: '+e); }
+}
+
+// SCAN
+async function shodanRequestScan() {
+  const ips = document.getElementById('scan-ips').value.trim();
+  const res  = document.getElementById('scan-submit-result');
+  if (!ips) { res.innerHTML = errBox('Enter IPs'); return; }
+  res.innerHTML = loading('Submitting scan…');
+  try {
+    const d = await (await fetch('/api/shodan/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ips})})).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    if (d.id) document.getElementById('scan-status-id').value = d.id;
+    res.innerHTML = `<div class="s-scan-progress"><span class="s-scan-id">ID: ${esc(d.id||'—')}</span><span class="s-scan-status">✓ Queued (${d.count} IP${d.count!==1?'s':''})</span><span style="color:var(--muted)">${d.credits_left} credits left</span></div>`;
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function shodanCheckScan() {
+  const id  = document.getElementById('scan-status-id').value.trim();
+  const res = document.getElementById('scan-status-result');
+  if (!id) { res.innerHTML = errBox('Enter a scan ID'); return; }
+  res.innerHTML = loading('Checking…');
+  try {
+    const d = await (await fetch(`/api/shodan/scan/${encodeURIComponent(id)}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    const s = d.scan||{};
+    res.innerHTML = `<div class="s-scan-progress"><span class="s-scan-id">ID: ${esc(s.id||id)}</span><span class="s-scan-status">Status: ${esc(s.status||'—')}</span><span style="color:var(--muted)">${s.count||0} hosts · ${esc((s.created||'').slice(0,19))}</span></div>`;
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+// COMMUNITY
+async function shodanCommunity() {
+  const q    = document.getElementById('community-q').value.trim();
+  const sort = document.getElementById('community-sort').value;
+  const res  = document.getElementById('community-result');
+  res.innerHTML = loading('Loading community queries…');
+  try {
+    const p = new URLSearchParams({sort, size:15, ...(q?{q}:{})});
+    const d = await (await fetch(`/api/shodan/query?${p}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    res.innerHTML = `<div style="font-size:10px;color:var(--muted);margin-bottom:10px">${d.total.toLocaleString()} queries in directory</div>` +
+      (d.queries||[]).map(q=>`<div class="s-exploit-row" style="cursor:pointer" onclick="setSearch(${JSON.stringify(q.query||'')});document.querySelector('.s-tab[onclick*=\\'search\\']').click()">
+        <div class="s-exploit-title">${esc(q.title||q.query)}</div>
+        <div class="s-exploit-meta">
+          <span style="color:#ff8c42;font-family:var(--fmono);font-size:10px">${esc(q.query)}</span>
+          <span class="s-exploit-type">▲ ${q.votes||0}</span>
+          ${(q.tags||[]).map(t=>`<span class="s-tag">${esc(t)}</span>`).join('')}
+        </div>
+      </div>`).join('');
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+// ══════════════════════════════════════════
+// FLIGHTRADAR24 INTERACTIVE
+// ══════════════════════════════════════════
+function frTab(el, name) {
+  document.querySelectorAll('.fr-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.fr-pane').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(`fr-pane-${name}`).classList.add('active');
+}
+
+async function fr24LoadLive() {
+  const res = document.getElementById('fr-live-result');
+  res.innerHTML = loading('Loading live flights…');
+  const airline  = document.getElementById('fr-filter-airline')?.value.trim();
+  const aircraft = document.getElementById('fr-filter-aircraft')?.value.trim();
+  try {
+    const p = new URLSearchParams();
+    if (airline)  p.set('airline', airline);
+    if (aircraft) p.set('aircraft_type', aircraft);
+    const d = await (await fetch(`/api/flightradar/live?${p}`)).json();
+    const flights = d.flights || d.demo || [];
+    // Update stat strip
+    document.getElementById('fr-live-count').textContent  = flights.length;
+    document.getElementById('fr-enroute-count').textContent = flights.filter(f=>f.status==='En Route').length;
+    document.getElementById('fr-desc-count').textContent    = flights.filter(f=>f.status==='Descending').length;
+    if (!flights.length) { res.innerHTML = '<div style="color:var(--muted);padding:20px 0;font-size:11px">No flights returned.</div>'; return; }
+    res.innerHTML = flights.map(f => {
+      const stCls = f.status==='En Route'?'fr-en-route':f.status==='Descending'?'fr-descending':'fr-landed';
+      return `<div class="fr-flight-row">
+        <div class="fr-callsign">${esc(f.callsign||'—')}</div>
+        <div style="flex:1;min-width:0">
+          <div class="fr-route">${esc(f.origin||'—')} → ${esc(f.dest||'—')}</div>
+          <div class="fr-airline">${esc(f.airline||'—')} · ${esc(f.aircraft||'—')}</div>
+        </div>
+        <div class="fr-stats">
+          <div class="fr-alt">FL${Math.round((f.alt||0)/100)}</div>
+          <div>${f.speed||0} kts · ${f.heading||0}°</div>
+          <div style="margin-top:2px"><span class="fr-badge ${stCls}">${esc(f.status||'—')}</span></div>
+        </div>
+      </div>`;
+    }).join('');
+    if (d.error) res.insertAdjacentHTML('afterbegin',`<div style="padding:8px 14px;font-size:10px;color:#f5c842;border-bottom:1px solid var(--border)">⚠ ${esc(d.error)} — showing demo data</div>`);
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function fr24FlightLookup() {
+  const id  = document.getElementById('fr-flight-id').value.trim();
+  const res = document.getElementById('fr-flight-result');
+  if (!id) { res.innerHTML = errBox('Enter a flight ID or callsign'); return; }
+  res.innerHTML = loading(`Looking up ${id}…`);
+  try {
+    const d = await (await fetch(`/api/flightradar/flight/${encodeURIComponent(id)}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    const f = d.flight || {};
+    res.innerHTML = `<div class="s-card"><div class="s-card-header"><div class="s-card-title">${esc(f.callsign||id)}</div></div>
+      <div class="s-card-body"><div class="fr-detail-grid">${Object.entries(f).slice(0,12).map(([k,v])=>`<div class="s-kv-item"><div class="s-kv-key">${esc(k)}</div><div class="s-kv-val">${esc(String(v))}</div></div>`).join('')}</div></div></div>`;
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function fr24AirportLookup() {
+  const iata = document.getElementById('fr-airport-iata').value.trim().toUpperCase();
+  const res  = document.getElementById('fr-airport-result');
+  if (!iata) { res.innerHTML = errBox('Enter an IATA code'); return; }
+  res.innerHTML = loading(`Looking up ${iata}…`);
+  try {
+    const d = await (await fetch(`/api/flightradar/airport/${encodeURIComponent(iata)}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    const a = d.airport || {};
+    const liveFlights = d.live?.data || [];
+    res.innerHTML = `<div class="s-card"><div class="s-card-header"><div class="s-card-title">${esc(a.name||iata)}</div><span style="color:var(--muted);font-size:10px">${esc(a.country||'')}</span></div>
+      <div class="s-card-body">
+        <div class="fr-detail-grid">${[['IATA',a.iata||iata],['ICAO',a.icao||'—'],['Country',a.country||'—'],['City',a.city||'—']].map(([k,v])=>`<div class="s-kv-item"><div class="s-kv-key">${k}</div><div class="s-kv-val">${esc(v)}</div></div>`).join('')}</div>
+        ${liveFlights.length?`<div style="font-size:9px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin:10px 0 6px">Live at ${esc(iata)}</div>${liveFlights.slice(0,10).map(f=>`<div class="fr-flight-row"><div class="fr-callsign">${esc(f.callsign||'—')}</div><div><div class="fr-route">${esc(f.origin||'—')} → ${esc(f.dest||'—')}</div><div class="fr-airline">${esc(f.aircraft||'—')}</div></div></div>`).join('')}`:''}
+      </div></div>`;
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+// ══════════════════════════════════════════
+// MARINE TRAFFIC INTERACTIVE
+// ══════════════════════════════════════════
+function mtTab(el, name) {
+  document.querySelectorAll('.mt-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.mt-pane').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(`mt-pane-${name}`).classList.add('active');
+}
+
+async function mtLoadVessels() {
+  const res  = document.getElementById('mt-vessels-result');
+  const type = document.getElementById('mt-filter-type')?.value || '';
+  res.innerHTML = loading('Loading vessels…');
+  try {
+    const p = new URLSearchParams();
+    if (type) p.set('vessel_type', type);
+    const d = await (await fetch(`/api/marinetraffic/vessels?${p}`)).json();
+    const vessels = d.vessels || [];
+    // Update stat strip
+    document.getElementById('mt-vessel-count').textContent  = vessels.length;
+    const uw = vessels.filter(v=>String(v.status).toLowerCase().includes('under')).length;
+    document.getElementById('mt-underway-count').textContent = uw;
+    document.getElementById('mt-moored-count').textContent   = vessels.length - uw;
+    if (!vessels.length) { res.innerHTML = '<div style="color:var(--muted);padding:20px 0;font-size:11px">No vessels returned.</div>'; return; }
+    res.innerHTML = vessels.map(v => {
+      const st = String(v.status||'').toLowerCase();
+      const stCls = st.includes('under')?'mt-underway':st.includes('moor')?'mt-moored':'mt-anchored';
+      return `<div class="mt-vessel-row">
+        <div>
+          <div class="mt-vessel-name" title="${esc(v.name)}">${esc(v.name)}</div>
+          <div class="mt-vessel-type">${esc(v.type||'—')} · ${esc(v.flag||'—')}</div>
+        </div>
+        <div style="flex:1;margin-left:10px">
+          <div class="mt-dest">→ ${esc(v.dest||'—')}</div>
+          <div class="mt-dest-sub">MMSI ${esc(v.mmsi||'—')} · IMO ${esc(v.imo||'—')}</div>
+        </div>
+        <div class="mt-speed">
+          <div>${v.speed||0} kn</div>
+          <div style="font-size:9px;color:var(--muted)">${v.course||0}°</div>
+          <div style="margin-top:3px"><span class="mt-status-badge ${stCls}">${esc(v.status||'—')}</span></div>
+        </div>
+      </div>`;
+    }).join('');
+    if (d.error) res.insertAdjacentHTML('afterbegin',`<div style="padding:8px 14px;font-size:10px;color:#38bdf8;border-bottom:1px solid var(--border)">⚠ ${esc(d.error)} — demo data</div>`);
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function mtVesselLookup() {
+  const mmsi = document.getElementById('mt-mmsi').value.trim();
+  const res  = document.getElementById('mt-vessel-result');
+  if (!mmsi) { res.innerHTML = errBox('Enter a MMSI number'); return; }
+  res.innerHTML = loading(`Looking up MMSI ${mmsi}…`);
+  try {
+    const d = await (await fetch(`/api/marinetraffic/vessel/${encodeURIComponent(mmsi)}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    const v = Array.isArray(d.vessel) ? d.vessel[0] : d.vessel;
+    if (!v) { res.innerHTML = '<div style="color:var(--muted)">No vessel found.</div>'; return; }
+    const fields = Object.entries(v).filter(([k])=>!['PHOTOS','LINKS'].includes(k)).slice(0,20);
+    res.innerHTML = `<div class="s-card"><div class="s-card-header"><div class="s-card-title">${esc(v.SHIPNAME||v.name||mmsi)}</div></div>
+      <div class="s-card-body"><div class="s-kv">${fields.map(([k,val])=>`<div class="s-kv-item"><div class="s-kv-key">${esc(k)}</div><div class="s-kv-val">${esc(String(val??'—'))}</div></div>`).join('')}</div></div></div>`;
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function mtPortCalls() {
+  const mmsi = document.getElementById('mt-mmsi').value.trim();
+  const res  = document.getElementById('mt-vessel-result');
+  if (!mmsi) { res.innerHTML = errBox('Enter a MMSI number first'); return; }
+  res.innerHTML = loading('Loading port calls…');
+  try {
+    const d = await (await fetch(`/api/marinetraffic/port_calls/${encodeURIComponent(mmsi)}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    const calls = Array.isArray(d.port_calls) ? d.port_calls : [];
+    res.innerHTML = `<div style="font-size:10px;color:var(--muted);margin-bottom:10px">${calls.length} port calls for MMSI ${esc(mmsi)}</div>` +
+      calls.map(c=>`<div class="mt-vessel-row"><div><div class="mt-vessel-name">${esc(c.PORT_NAME||c.port||'—')}</div><div class="mt-vessel-type">${esc(c.ARRIVAL||'')}</div></div><div style="margin-left:10px;font-size:10px;color:var(--muted)">${esc(c.DEPARTURE||c.departure||'')}</div></div>`).join('');
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function mtExpectedArrivals() {
+  const portId = document.getElementById('mt-port-id').value.trim();
+  const res    = document.getElementById('mt-port-result');
+  if (!portId) { res.innerHTML = errBox('Enter a port ID'); return; }
+  res.innerHTML = loading(`Loading arrivals for ${portId}…`);
+  try {
+    const d = await (await fetch(`/api/marinetraffic/expected/${encodeURIComponent(portId)}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    const arrivals = Array.isArray(d.arrivals) ? d.arrivals : [];
+    res.innerHTML = `<div style="font-size:10px;color:var(--muted);margin-bottom:10px">${arrivals.length} expected arrivals at ${esc(portId)}</div>` +
+      arrivals.map(a=>`<div class="mt-vessel-row"><div><div class="mt-vessel-name">${esc(a.SHIPNAME||a.name||'—')}</div><div class="mt-vessel-type">${esc(a.TYPE||'—')}</div></div><div style="margin-left:10px"><div class="mt-dest">${esc(a.ETA||a.eta||'—')}</div><div class="mt-dest-sub">Speed: ${a.SPEED||0} kn</div></div></div>`).join('');
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+async function mtSearch() {
+  const q = document.getElementById('mt-search-q').value.trim();
+  const res = document.getElementById('mt-search-result');
+  if (!q) { res.innerHTML = errBox('Enter a search term'); return; }
+  res.innerHTML = loading(`Searching for "${q}"…`);
+  try {
+    const d = await (await fetch(`/api/marinetraffic/search?q=${encodeURIComponent(q)}`)).json();
+    if (d.error) { res.innerHTML = errBox(d.error); return; }
+    const results = Array.isArray(d.results) ? d.results : [];
+    res.innerHTML = `<div style="font-size:10px;color:var(--muted);margin-bottom:10px">${results.length} results for "${esc(q)}"</div>` +
+      results.map(v=>`<div class="mt-vessel-row" style="cursor:pointer" onclick="document.getElementById('mt-mmsi').value='${esc(v.MMSI||v.mmsi||'')}';mtTab(document.querySelector('.mt-tab[onclick*=vessel-lookup]'),'vessel-lookup');mtVesselLookup()">
+        <div><div class="mt-vessel-name">${esc(v.SHIPNAME||v.name||'—')}</div><div class="mt-vessel-type">${esc(v.TYPENAME||v.type||'—')}</div></div>
+        <div style="margin-left:10px;font-family:var(--fmono);font-size:10px;color:#38bdf8">${esc(v.MMSI||v.mmsi||'—')}</div>
+      </div>`).join('');
+  } catch(e) { res.innerHTML = errBox(e); }
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+async function init() {
+  await loadRegistry();
+  for (let i = 0; i < 3; i++) await loadPanel(i);
+}
+
+// Boot everything
+initKeyBadges();
+shodanLoadStatus();
+shodanLoadMyIP();
+fr24LoadLive();
+mtLoadVessels();
+init();
+setInterval(refreshAll, 90_000);
+</script>
+</body>
+</html>
